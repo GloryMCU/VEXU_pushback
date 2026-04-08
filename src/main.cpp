@@ -7,44 +7,37 @@
 /*                                                                            */
 /*----------------------------------------------------------------------------*/
 #include "vex.h"
-#include"robot_confing.h"
-#include"chassis.h"
-#include"button.h"
-#include"user_control.h"
-#include"parameters.h"
-#include"sensor.h"
 
-using namespace std;
-using namespace vex;
+#include "config/robot_config.h"
+#include "control/driver_control.h"
+#include "input/controller_input.h"
+#include "subsystems/drive.h"
+#include "sensors/sensors.h"
 
- #ifdef COMPETITION    
- competition Competition; 
- #endif
+#ifdef COMPETITION
+vex::competition Competition;
+#endif
 
 int main() {
+  vex::timer time_begin;
+  time_begin.system();
 
-    timer time_begin;          // 创建计时器对象
-    time_begin.system();       // 记录系统启动时间（用于时间基准）
+  basic::config::Inertial.calibrate();
+  while (basic::config::Inertial.isCalibrating()) {
+    vex::wait(5, vex::msec);
+  }
+  basic::config::Inertial.resetHeading();
+  basic::config::Inertial.resetRotation();
 
-    // IMU传感器校准流程
-    Inertial.calibrate();                  // 启动惯性测量单元校准
-    waitUntil(!Inertial.isCalibrating());  // 阻塞直到校准完成
-    Inertial.resetHeading();
-    Inertial.resetRotation();
+  basic::config::Controller.Screen.setCursor(5, 1);
+  basic::config::Controller.Screen.print("      calibrated!");
 
+  vex::thread controller_task(basic::input::input_updating_thread);
+  vex::thread chassis_task(basic::subsystems::chassis_updating_thread);
+  vex::thread sensor_task(basic::sensors::runsensor);
 
-     Controller.Screen.setCursor(5, 1);     // 设置控制器屏幕光标位置
-     Controller.Screen.print("      calibrated!"); // 显示校准完成提示
-
-     // 启动多线程任务
-     thread Tcontroller(button_updating_thread);  //控制器更新线程
-     thread Tchassis(chassis_updating_thread);    // 底盘状态更新线程
-     thread Sensor(runsensor);
-
-     // 按键状态更新线程
-
-     #ifdef COMPETITION
-     Competition.drivercontrol(user_control); // 设置手动控制函数
-     #endif
-    return 0;
+#ifdef COMPETITION
+  Competition.drivercontrol(basic::control::user_control);
+#endif
+  return 0;
 }
