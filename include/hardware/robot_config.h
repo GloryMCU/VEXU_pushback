@@ -1,12 +1,16 @@
-#ifndef BASIC_CONFIG_ROBOT_CONFIG_H_
-#define BASIC_CONFIG_ROBOT_CONFIG_H_
+#ifndef BASIC_HARDWARE_ROBOT_CONFIG_H_
+#define BASIC_HARDWARE_ROBOT_CONFIG_H_
 
 #include "vex.h"
 
 namespace basic {
-namespace config {
+namespace hardware {
 
 constexpr bool kIsBlue = false;
+constexpr int kRefreshTime = 10;
+constexpr int kDeadZone = 10;
+constexpr double kImuModCoefficient = 3599.9;
+constexpr double kWheelTransitionCoefficient = 40.0;
 
 extern vex::inertial Inertial;
 extern vex::brain Brain;
@@ -35,7 +39,7 @@ extern vex::motor up_overhang_motor;
 
 extern vex::motor up_motor1;
 
-}  // namespace config
+}  // namespace hardware
 }  // namespace basic
 
 #endif

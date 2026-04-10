@@ -8,11 +8,10 @@
 /*----------------------------------------------------------------------------*/
 #include "vex.h"
 
-#include "config/robot_config.h"
-#include "control/driver_control.h"
-#include "input/controller_input.h"
-#include "subsystems/drive.h"
-#include "sensors/sensors.h"
+#include "control/chassis.h"
+#include "hardware/robot_config.h"
+#include "hardware/sensors.h"
+#include "input/controller.h"
 
 #ifdef COMPETITION
 vex::competition Competition;
@@ -22,22 +21,21 @@ int main() {
   vex::timer time_begin;
   time_begin.system();
 
-  basic::config::Inertial.calibrate();
-  while (basic::config::Inertial.isCalibrating()) {
+  basic::hardware::Inertial.calibrate();
+  while (basic::hardware::Inertial.isCalibrating()) {
     vex::wait(5, vex::msec);
   }
-  basic::config::Inertial.resetHeading();
-  basic::config::Inertial.resetRotation();
+  basic::hardware::Inertial.resetHeading();
+  basic::hardware::Inertial.resetRotation();
 
-  basic::config::Controller.Screen.setCursor(5, 1);
-  basic::config::Controller.Screen.print("      calibrated!");
+  basic::hardware::show_calibrated();
 
-  vex::thread controller_task(basic::input::input_updating_thread);
-  vex::thread chassis_task(basic::subsystems::chassis_updating_thread);
-  vex::thread sensor_task(basic::sensors::runsensor);
+  vex::thread controller_task(basic::input::run_input_thread);
+  vex::thread chassis_task(basic::control::run_chassis_thread);
+  vex::thread sensor_task(basic::hardware::run_sensor_thread);
 
 #ifdef COMPETITION
-  Competition.drivercontrol(basic::control::user_control);
+  Competition.drivercontrol(basic::control::start_driver_control);
 #endif
   return 0;
 }

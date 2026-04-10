@@ -1,7 +1,7 @@
-#include "config/robot_config.h"
+#include "hardware/robot_config.h"
 
 namespace basic {
-namespace config {
+namespace hardware {
 
 vex::motor motor_fr1 = vex::motor(vex::PORT17, vex::ratio6_1, true);
 vex::motor motor_fr2 = vex::motor(vex::PORT18, vex::ratio6_1, false);
@@ -33,5 +33,5 @@ vex::brain Brain;
 vex::controller Controller = vex::controller(vex::controllerType::primary);
 vex::inertial Inertial = vex::inertial(vex::PORT20);
 
-}  // namespace config
+}  // namespace hardware
 }  // namespace basic

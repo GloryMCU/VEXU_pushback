@@ -1,5 +1,5 @@
-#ifndef BASIC_INPUT_CONTROLLER_INPUT_H_
-#define BASIC_INPUT_CONTROLLER_INPUT_H_
+#ifndef BASIC_INPUT_CONTROLLER_H_
+#define BASIC_INPUT_CONTROLLER_H_
 
 namespace basic {
 namespace input {
@@ -59,9 +59,9 @@ struct ControllerState {
   double rating[4]{0, 0, 0, 0};
 };
 
-extern ControllerState controls;
+ControllerState get_controls_snapshot();
 
-void input_updating_thread();
+void run_input_thread();
 
 }  // namespace input
 }  // namespace basic

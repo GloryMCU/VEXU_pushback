@@ -1,348 +1,129 @@
-# Basic 项目代码规范
+# Basic 项目当前代码结构
+
+本文档只描述仓库当前已经存在的目录和代码职责。
+
+## 根目录
+
+```text
+basic/
+├── CODE_STYLE.md
+├── makefile
+├── include/
+├── src/
+├── build/
+└── vex/
+```
+
+- `makefile`：VEX V5 工程构建入口。
+- `include/`：头文件。
+- `src/`：实现文件。
+- `build/`：构建产物目录。
+- `vex/`：VEX 工具链相关 make 规则。
+
+## 当前头文件结构
+
+```text
+include/
+├── vex.h
+├── control/
+│   └── chassis.h
+├── hardware/
+│   ├── robot_config.h
+│   └── sensors.h
+├── input/
+│   └── controller.h
+├── executer/
+└── output/
+```
+
+- `include/vex.h`
+  - 引入 VEX SDK 头文件。
+  - 目前还定义了 `COMPETITION` 宏。
+
+- `include/control/chassis.h`
+  - 声明 `basic::control::Chassis`。
+  - 提供底盘控制、刹车、线程入口和机构控制相关接口声明。
+
+- `include/hardware/robot_config.h`
+  - 声明全局硬件对象和硬件常量。
+  - 包括电机、控制器、惯导和刷新周期等配置。
+
+- `include/hardware/sensors.h`
+  - 声明传感器线程、IMU 相关函数、颜色识别状态和显示函数。
+
+- `include/input/controller.h`
+  - 声明 `ControllerState`。
+  - 提供输入线程入口和输入快照读取接口。
+
+- `include/executer/`
+  - 当前为空目录。
+
+- `include/output/`
+  - 当前为空目录。
+
+## 当前源文件结构
+
+```text
+src/
+├── control/
+│   ├── chassis.cpp
+│   └── mechanisms.cpp
+├── executer/
+│   └── main.cpp
+├── hardware/
+│   ├── robot_config.cpp
+│   └── sensors.cpp
+├── input/
+│   └── controller.cpp
+└── output/
+```
+
+- `src/control/chassis.cpp`
+  - 实现底盘功率整形、驾驶控制计算、刹车模式和底盘线程。
+
+- `src/control/mechanisms.cpp`
+  - 实现手动机构控制循环。
+  - 负责上层、 middle、under 三个 overhang 电机，以及 intake/throw 机构模式切换。
+
+- `src/executer/main.cpp`
+  - 程序入口。
+  - 负责惯导校准、后台线程启动和 `competition` 回调注册。
+
+- `src/hardware/robot_config.cpp`
+  - 定义 `robot_config.h` 里声明的硬件对象。
+  - 包括底盘电机、机构电机、控制器、Brain 和 Inertial。
+
+- `src/hardware/sensors.cpp`
+  - 实现串口颜色传感器读取、加速标志更新、屏幕显示和 IMU 辅助函数。
+
+- `src/input/controller.cpp`
+  - 实现手柄输入采集线程。
+  - 生成轴值、按钮状态和 `press_*` 边沿事件，并提供线程安全快照。
 
-## 目标
+- `src/output/`
+  - 当前为空目录。
 
-本项目采用“按职责分层”的目录结构。
-放置代码时，优先按功能职责分类，不按个人习惯分类，也不按文件大小分类。
+## 当前命名空间
 
-这套规范的目标是：
+项目代码当前使用以下命名空间：
 
-- 将硬件定义和行为逻辑分开
-- 将输入采集和控制逻辑分开
-- 将子系统实现和程序入口分开
-- 避免把无关函数继续塞进一个“杂项文件”
-- 让命名、目录、职责保持稳定
-
-## 目录结构说明
-
-### `include/common`
-
-这里放全项目通用的基础内容。
-
-适合放：
-
-- 全局常量
-- 可复用的小型工具类型
-- 不依赖某个具体机构的通用算法
-
-当前示例：
-
-- `parameters.h`
-- `pid.h`
-
-这里不应该放：
-
-- 电机对象
-- 控制器状态
-- 某个机构的行为逻辑
-
-### `include/config` 和 `src/config`
-
-这里放机器人硬件配置。
-
-适合放：
-
-- 电机对象声明与定义
-- 传感器对象声明与定义
-- 控制器对象声明与定义
-- 阵营常量
-- 端口绑定
-
-当前示例：
-
-- `robot_config.h`
-- `robot_config.cpp`
-
-这一层回答的问题是：
-
-“这台机器人接了哪些硬件，它们分别是什么、插在哪。”
-
-这里不应该放驾驶逻辑、机构动作逻辑。
-
-### `include/input` 和 `src/input`
-
-这里放输入采集层。
-
-适合放：
-
-- 摇杆原始值
-- 按钮状态
-- 按钮边沿事件
-- 输入更新线程
-
-当前示例：
-
-- `controller_input.h`
-- `controller_input.cpp`
-
-这一层回答的问题是：
-
-“当前操作手到底按了什么。”
-
-这里不直接决定子系统怎么动作，只负责生成输入状态。
-
-### `include/subsystems` 和 `src/subsystems`
-
-这里放机器人各个执行机构本体。
-
-适合放：
-
-- 底盘逻辑
-- 进球逻辑
-- 挂钩逻辑
-- 抛球逻辑
-- 和某个机构强相关的电机控制辅助函数
-
-当前示例：
-
-- `drive.h`
-- `drive.cpp`
-- `mechanisms.h`
-- `mechanisms.cpp`
-
-这一层回答的问题是：
-
-“某个机构该怎么动。”
-
-如果一个文件直接控制某组电机、实现某个物理机构的动作，它通常应该放在这里。
-
-### `include/sensors` 和 `src/sensors`
-
-这里放传感器读写与解析逻辑。
-
-适合放：
-
-- IMU 读写封装
-- 串口颜色传感器解析
-- 由传感器数据推导出的状态
-
-当前示例：
-
-- `sensors.h`
-- `sensors.cpp`
-
-这一层回答的问题是：
-
-“机器人感知到了什么。”
-
-### `include/localization` 和 `src/localization`
-
-这里放定位和几何计算相关内容。
-
-适合放：
-
-- 里程计
-- 位置估计
-- 姿态/位姿相关计算
-- 只服务于定位模块的几何辅助类型
-
-当前示例：
-
-- `odometry.h`
-- `odometry.cpp`
-
-这一层回答的问题是：
-
-“机器人现在在哪里，运动状态是什么。”
-
-### `include/control` 和 `src/control`
-
-这里放控制调度层。
-
-适合放：
-
-- 手动控制主循环
-- 输入到子系统的调度逻辑
-- 后续如果有自动流程编排，也放这里
-
-当前示例：
-
-- `driver_control.h`
-- `driver_control.cpp`
-
-这一层回答的问题是：
-
-“当前应该调哪些子系统工作。”
-
-### `src/main.cpp`
-
-`main.cpp` 必须保持轻量。
-
-只应该做这些事情：
-
-- 启动初始化
-- 传感器校准
-- 后台线程启动
-- 比赛回调注册
-
-不应该把子系统行为、输入解析、机构控制细节直接写在 `main.cpp` 里。
-
-## 命名空间规则
-
-项目代码统一放在 `basic` 命名空间下。
-
-第二层命名空间必须和目录对应：
-
-- `basic::common`
-- `basic::config`
-- `basic::input`
-- `basic::subsystems`
-- `basic::sensors`
-- `basic::localization`
 - `basic::control`
+- `basic::hardware`
+- `basic::input`
 
-例如：
+## 当前代码分层
 
-- 硬件对象放在 `basic::config`
-- 控制器状态放在 `basic::input`
-- 底盘与机构放在 `basic::subsystems`
+- `hardware`
+  - 放硬件对象定义和传感器相关逻辑。
 
-规范要求：
+- `input`
+  - 放控制器输入采集和输入状态表达。
 
-- 头文件中不要写 `using namespace basic;`
-- 头文件中不要写 `using namespace vex;`
-- 源文件中也尽量优先使用显式命名，而不是大范围 `using namespace`
+- `control`
+  - 放底盘和机构的行为控制逻辑。
 
-## 命名规则
-
-### 文件名
-
-统一使用 `snake_case`。
-
-正确示例：
-
-- `robot_config.h`
-- `controller_input.cpp`
-- `driver_control.cpp`
-
-不要再使用模糊文件名：
-
-- `basic_functions.cpp`
-- `misc.cpp`
-- `tools.cpp`
-
-### 命名空间
-
-统一使用小写 `snake_case`，并与目录一致。
-
-### 类型名
-
-统一使用 `PascalCase`。
-
-例如：
-
-- `ControllerState`
-- `Chassis`
-- `Position`
-
-### 函数名
-
-自由函数优先使用 `snake_case`。
-
-如果某个既有类已经使用另一套风格，那么在没有专项重构之前，先保持类内部风格一致，不强行混改。
-
-### 常量名
-
-统一使用 `k` 前缀。
-
-例如：
-
-- `kRefreshTime`
-- `kDeadZone`
-- `kImuModCoefficient`
-
-## 头文件规则
-
-头文件用于声明接口，不用于堆放大量实现细节，除非有明确理由。
-
-头文件允许放：
-
-- 类声明
-- 函数声明
-- 小型内联函数
-- 常量
-- 轻量级类型
-
-头文件不建议放：
-
-- 大段具体实现
-- 无关辅助函数
-- `using namespace ...`
-
-## 源文件规则
-
-源文件用于放具体实现。
-
-如果某些辅助函数只在一个 `.cpp` 文件内部使用，应优先放进匿名命名空间。
-
-适合放进匿名命名空间的内容：
-
-- 电机输出整形函数
-- 当前模块私有的小型辅助逻辑
-- 局部解析函数
-
-如果某个辅助函数开始被多个模块复用，就不要复制粘贴，应当移动到正确的共享层。
-
-## 新代码放置规则
-
-新增代码时，先判断它回答的是哪一类问题。
-
-### 如果代码定义硬件对象
-
-放进 `config`
-
-### 如果代码读取控制器输入
-
-放进 `input`
-
-### 如果代码直接驱动某个机构的电机
-
-放进 `subsystems`
-
-### 如果代码读取或解析传感器
-
-放进 `sensors`
-
-### 如果代码计算机器人位置、姿态、几何量
-
-放进 `localization`
-
-### 如果代码负责把输入或模式映射到多个子系统
-
-放进 `control`
-
-### 如果代码是多个模块都会用到的通用能力
-
-放进 `common`
-
-## 重构原则
-
-做结构调整时，遵守以下原则：
-
-- 优先先把代码移到正确层，再考虑重写逻辑
-- 不要把大规模结构调整和大规模行为修改混在同一次改动里
-- `main.cpp` 必须保持轻量
-- 不要再在根命名空间里新增大量全局变量
-- 一个职责清晰的模块，优先于一个巨大的“工具文件”
-
-## 需要避免的反模式
-
-以后不要再引入这些模式：
-
-- 把无关函数重新塞回一个 `basic_functions` 文件
-- 把大量机器人逻辑直接写回 `main.cpp`
-- 在一个头文件里暴露几十个互不相关的全局变量
-- 一个模块同时负责输入采集和机构行为
-- 已经存在职责目录时，继续把新文件平铺到 `src/` 根目录
-
-## 构建规则说明
-
-当前 `makefile` 已支持：
-
-- `src/*.cpp`
-- `src/*/*.cpp`
-- `include/*.h`
-- `include/*/*.h`
+- `executer`
+  - 放程序入口 `main.cpp`。
 
 因此新代码目前应保持在这一层级深度内。
 如果以后要继续增加更深目录，需要同步修改构建规则。
