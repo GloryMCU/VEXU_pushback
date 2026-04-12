@@ -5,8 +5,7 @@
 
 #include <array>
 
-namespace basic {
-namespace control {
+namespace basic::control {
 
 namespace {
 
@@ -146,5 +145,4 @@ void start_driver_control() {
   static vex::thread user_control_task(run_driver_control_loop);
 }
 
-}  // namespace control
-}  // namespace basic
+}  // namespace basic::control

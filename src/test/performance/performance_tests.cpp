@@ -6,8 +6,7 @@
 #include <cstdio>
 #include <limits>
 
-namespace basic {
-namespace test {
+namespace basic::test {
 
 namespace {
 
@@ -257,5 +256,4 @@ bool start_test_mode_if_enabled() {
   return true;
 }
 
-}  // namespace test
-}  // namespace basic
+}  // namespace basic::test

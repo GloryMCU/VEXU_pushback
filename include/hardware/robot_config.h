@@ -3,8 +3,7 @@
 
 #include "vex.h"
 
-namespace basic {
-namespace hardware {
+namespace basic::hardware {
 
 constexpr bool kIsBlue = false;
 constexpr int kRefreshTime = 10;
@@ -39,7 +38,6 @@ extern vex::motor up_overhang_motor;
 
 extern vex::motor up_motor1;
 
-}  // namespace hardware
-}  // namespace basic
+}  // namespace basic::hardware
 
 #endif

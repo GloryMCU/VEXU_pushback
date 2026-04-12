@@ -4,8 +4,7 @@
 
 #include <cmath>
 
-namespace basic {
-namespace input {
+namespace basic::input {
 
 namespace {
 
@@ -111,5 +110,4 @@ void run_input_thread() {
   }
 }
 
-}  // namespace input
-}  // namespace basic
+}  // namespace basic::input

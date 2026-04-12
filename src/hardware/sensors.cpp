@@ -3,8 +3,7 @@
 #include "hardware/robot_config.h"
 #include "v5_apiuser.h"
 
-namespace basic {
-namespace hardware {
+namespace basic::hardware {
 
 int Accelerate = 0;
 char CurrentColorCode = 'N';
@@ -111,5 +110,4 @@ void run_sensor_thread() {
   }
 }
 
-}  // namespace hardware
-}  // namespace basic
+}  // namespace basic::hardware

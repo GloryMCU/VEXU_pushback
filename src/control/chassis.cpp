@@ -6,8 +6,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace basic {
-namespace control {
+namespace basic::control {
 
 namespace {
 
@@ -111,5 +110,4 @@ void run_chassis_thread() {
   }
 }
 
-}  // namespace control
-}  // namespace basic
+}  // namespace basic::control

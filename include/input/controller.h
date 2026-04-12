@@ -1,8 +1,7 @@
 #ifndef BASIC_INPUT_CONTROLLER_H_
 #define BASIC_INPUT_CONTROLLER_H_
 
-namespace basic {
-namespace input {
+namespace basic::input {
 
 struct ControllerState {
   int time_ms{0};
@@ -63,7 +62,6 @@ ControllerState get_controls_snapshot();
 
 void run_input_thread();
 
-}  // namespace input
-}  // namespace basic
+}  // namespace basic::input
 
 #endif

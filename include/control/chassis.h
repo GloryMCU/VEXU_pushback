@@ -3,8 +3,7 @@
 
 #include "vex.h"
 
-namespace basic {
-namespace control {
+namespace basic::control {
 
 class Chassis {
  private:
@@ -38,7 +37,6 @@ void run_driver_control_loop();
 void start_driver_control();
 void run_chassis_thread();
 
-}  // namespace control
-}  // namespace basic
+}  // namespace basic::control
 
 #endif

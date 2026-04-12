@@ -3,8 +3,7 @@
 
 #include "vex.h"
 
-namespace basic {
-namespace hardware {
+namespace basic::hardware {
 
 constexpr int kLedPower = 100;
 constexpr int kSensorLoopDelay = 50;
@@ -23,7 +22,6 @@ void show_sensor_color(char color_code);
 extern int Accelerate;
 extern char CurrentColorCode;
 
-}  // namespace hardware
-}  // namespace basic
+}  // namespace basic::hardware
 
 #endif
