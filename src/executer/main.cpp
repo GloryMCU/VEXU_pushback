@@ -12,6 +12,7 @@
 #include "hardware/robot_config.h"
 #include "hardware/sensors.h"
 #include "input/controller.h"
+#include "test/performance_tests.h"
 
 #ifdef COMPETITION
 vex::competition Competition;
@@ -29,6 +30,12 @@ int main() {
   basic::hardware::Inertial.resetRotation();
 
   basic::hardware::show_calibrated();
+
+  if (basic::test::start_test_mode_if_enabled()) {
+    while (true) {
+      vex::this_thread::sleep_for(1000);
+    }
+  }
 
   vex::thread controller_task(basic::input::run_input_thread);
   vex::thread chassis_task(basic::control::run_chassis_thread);
