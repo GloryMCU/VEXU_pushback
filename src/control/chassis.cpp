@@ -1,5 +1,7 @@
 #include "control/chassis.h"
 
+#include "control/motor_control.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -9,9 +11,9 @@ namespace {
 
 void apply_motor_power(vex::motor& motor, double speed, vex::brakeType type) {
   if (speed) {
-    motor.spin(vex::directionType::fwd, speed, vex::percentUnits::pct);
+    velocitycontrol(motor, speed, vex::pct);
   } else {
-    motor.stop(type);
+    stopcontrol(motor, type);
   }
 }
 

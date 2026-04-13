@@ -1,4 +1,5 @@
 #include "control/mechanisms.h"
+#include "control/motor_control.h"
 
 #include <array>
 
@@ -14,9 +15,9 @@ constexpr std::array<int, kIndexedMotorCount> kUpperThrowSpeeds{{45, 45, 45, 100
 
 void set_motor_power(vex::motor& motor, double speed, vex::brakeType type = vex::coast) {
   if (speed) {
-    motor.spin(vex::directionType::fwd, speed, vex::percentUnits::pct);
+    velocitycontrol(motor, speed, vex::pct);
   } else {
-    motor.stop(type);
+    stopcontrol(motor, type);
   }
 }
 
@@ -59,37 +60,37 @@ void apply_indexed_mode(RobotHardware& hardware, const MechanismState& mechanism
 
 void update_under_overhang(RobotHardware& hardware, const ControllerInputState& input) {
   if (input.up) {
-    hardware.under_overhang_motor.spin(vex::fwd, -20, vex::pct);
+    velocitycontrol(hardware.under_overhang_motor, -20, vex::pct);
   }
   if (input.down) {
-    hardware.under_overhang_motor.spin(vex::fwd, 20, vex::pct);
+    velocitycontrol(hardware.under_overhang_motor, 20, vex::pct);
   }
   if (!input.up && !input.down) {
-    hardware.under_overhang_motor.stop(vex::hold);
+    stopcontrol(hardware.under_overhang_motor, vex::hold);
   }
 }
 
 void update_middle_overhang(RobotHardware& hardware, const ControllerInputState& input) {
   if (input.left) {
-    hardware.middle_overhang_motor.spin(vex::fwd, 20, vex::pct);
+    velocitycontrol(hardware.middle_overhang_motor, 20, vex::pct);
   }
   if (input.right) {
-    hardware.middle_overhang_motor.spin(vex::fwd, -20, vex::pct);
+    velocitycontrol(hardware.middle_overhang_motor, -20, vex::pct);
   }
   if (!input.left && !input.right) {
-    hardware.middle_overhang_motor.stop(vex::hold);
+    stopcontrol(hardware.middle_overhang_motor, vex::hold);
   }
 }
 
 void update_upper_overhang(RobotHardware& hardware, const ControllerInputState& input) {
   if (input.x) {
-    hardware.up_overhang_motor.spin(vex::fwd, 50, vex::pct);
+    velocitycontrol(hardware.up_overhang_motor, 50, vex::pct);
   }
   if (input.b) {
-    hardware.up_overhang_motor.spin(vex::fwd, -50, vex::pct);
+    velocitycontrol(hardware.up_overhang_motor, -50, vex::pct);
   }
   if (!input.x && !input.b) {
-    hardware.up_overhang_motor.stop(vex::hold);
+    stopcontrol(hardware.up_overhang_motor, vex::hold);
   }
 }
 
