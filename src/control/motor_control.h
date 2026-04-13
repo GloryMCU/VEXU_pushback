@@ -16,6 +16,7 @@ void torquecontrol(vex::motor& motor, double torque_nm);
 void stopcontrol(vex::motor& motor, vex::brakeType mode = vex::coast);
 
 double get_position(vex::motor& motor, vex::rotationUnits units = vex::deg);
+double get_revolutions(vex::motor& motor);
 double get_velocity(vex::motor& motor, vex::velocityUnits units = vex::rpm);
 double get_velocity(vex::motor& motor, vex::percentUnits units);
 double get_current(vex::motor& motor, vex::currentUnits units = vex::amp);

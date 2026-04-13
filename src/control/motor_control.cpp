@@ -61,6 +61,10 @@ double get_position(vex::motor& motor, vex::rotationUnits units) {
   return motor.position(units);
 }
 
+double get_revolutions(vex::motor& motor) {
+  return motor.position(vex::rev);
+}
+
 double get_velocity(vex::motor& motor, vex::velocityUnits units) {
   return motor.velocity(units);
 }
