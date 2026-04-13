@@ -1,113 +1,72 @@
 #include "hardware/sensors.h"
 
-#include "hardware/robot_config.h"
 #include "v5_apiuser.h"
 
-namespace basic::hardware {
+namespace basic::hardware::robots {
 
-int Accelerate = 0;
-char CurrentColorCode = 'N';
+namespace {
 
-ColorName classify_hue(double hue) {
-  if ((hue >= 330) || (hue < 30)) return ColorName::red;
-  if (hue >= 30 && hue < 90) return ColorName::yellow;
-  if (hue >= 90 && hue < 180) return ColorName::green;
-  if (hue >= 180 && hue < 270) return ColorName::blue;
-  return ColorName::unknown;
-}
-
-void initialize_sensors() {
-  // colorSensor.setLight(ledState::on);
-  // colorSensor.setLightPower(kLedPower);
-}
-
-double imu_heading() {
-  double heading = Inertial.rotation(vex::rotationUnits::deg);
-  heading = heading / kImuModCoefficient * 3600;
-
-  while (heading < 0) heading += 360;
-  while (heading >= 360) heading -= 360;
-  return heading;
-}
-
-void reset_heading() { Inertial.resetRotation(); }
-
-void show_calibrated() {
-  Controller.Screen.setCursor(5, 1);
-  Controller.Screen.print("      calibrated!");
-}
-
-void show_sensor_color(char color_code) {
-  Brain.Screen.clearScreen();
-  Brain.Screen.setCursor(1, 1);
-  Brain.Screen.print("%c", color_code);
-  Brain.Screen.newLine();
-
-  switch (color_code) {
+void update_acceleration_state(SensorState& sensors) {
+  switch (sensors.current_color_code) {
     case 'R':
-      Brain.Screen.print(">> RED <<");
+      sensors.accelerate = kIsBlue ? 1 : 0;
       break;
     case 'G':
-      Brain.Screen.print(">> GREEN <<");
+      sensors.accelerate = 0;
       break;
     case 'B':
-      Brain.Screen.print(">> BLUE <<");
+      sensors.accelerate = kIsBlue ? 0 : 1;
       break;
     default:
-      Brain.Screen.print("?? UNKNOWN ??");
+      sensors.accelerate = 0;
       break;
   }
 }
 
-void run_sensor_thread() {
-  static bool inited = false;
-  if (!inited) {
-    vexGenericSerialEnable(serial_sensor.index(), 9);
-    vexGenericSerialBaudrate(serial_sensor.index(), 115200);
-    initialize_sensors();
-    inited = true;
+}  // namespace
+
+void sensor_update(RobotHardware& hardware, RobotState& state) {
+  SensorState& sensors = state.sensors;
+  const int now = hardware.brain.timer(vex::timeUnits::msec);
+
+  if (!sensors.initialized) {
+    vexGenericSerialEnable(hardware.serial_sensor.index(), 9);
+    vexGenericSerialBaudrate(hardware.serial_sensor.index(), 115200);
+    sensors.initialized = true;
   }
 
-  char previous_color = 'N';
-
-  while (true) {
-    int bytes_avail = vexGenericSerialReceiveAvail(serial_sensor.index());
-    while (bytes_avail-- > 0) {
-      int character = vexGenericSerialReadChar(serial_sensor.index());
-      if (character != -1) {
-        CurrentColorCode = static_cast<char>(character);
-      }
+  if (now - sensors.last_update_ms < kSensorLoopDelay) {
+    if (now < sensors.hold_until_ms) {
+      sensors.accelerate = -1;
     }
-
-    switch (CurrentColorCode) {
-      case 'R':
-        Accelerate = kIsBlue ? 1 : 0;
-        break;
-      case 'G':
-        Accelerate = 0;
-        break;
-      case 'B':
-        Accelerate = kIsBlue ? 0 : 1;
-        break;
-      default:
-        Accelerate = 0;
-        break;
-    }
-
-    if (kIsBlue) {
-      if (previous_color == 'R' && CurrentColorCode != 'R') {
-        Accelerate = -1;
-        vex::this_thread::sleep_for(500);
-      }
-    } else if (previous_color == 'B' && CurrentColorCode != 'B') {
-      Accelerate = -1;
-      vex::this_thread::sleep_for(500);
-    }
-
-    show_sensor_color(CurrentColorCode);
-    previous_color = CurrentColorCode;
-    vex::this_thread::sleep_for(80);
+    return;
   }
+  sensors.last_update_ms = now;
+
+  int bytes_avail = vexGenericSerialReceiveAvail(hardware.serial_sensor.index());
+  while (bytes_avail-- > 0) {
+    const int character = vexGenericSerialReadChar(hardware.serial_sensor.index());
+    if (character != -1) {
+      sensors.current_color_code = static_cast<char>(character);
+    }
+  }
+
+  update_acceleration_state(sensors);
+
+  if (kIsBlue) {
+    if (sensors.previous_color_code == 'R' && sensors.current_color_code != 'R') {
+      sensors.hold_until_ms = now + 500;
+    }
+  } else if (sensors.previous_color_code == 'B' && sensors.current_color_code != 'B') {
+    sensors.hold_until_ms = now + 500;
+  }
+
+  if (now < sensors.hold_until_ms) {
+    sensors.accelerate = -1;
+  }
+
+  hardware.show_sensor_color(sensors.current_color_code);
+  sensors.previous_color_code = sensors.current_color_code;
 }
 
-}  // namespace basic::hardware
+}  // namespace basic::hardware::robots

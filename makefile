@@ -22,12 +22,18 @@ OBJ = $(addprefix $(BUILD)/, $(addsuffix .o, $(basename $(SRC_C))) )
 SRC_H  = $(wildcard include/*.h)
 SRC_H += $(wildcard include/*/*.h)
 SRC_H += $(wildcard include/*/*/*.h)
+SRC_H += $(wildcard src/*.h)
+SRC_H += $(wildcard src/*/*.h)
+SRC_H += $(wildcard src/*/*/*.h)
+SRC_H += $(wildcard src/*.hpp)
+SRC_H += $(wildcard src/*/*.hpp)
+SRC_H += $(wildcard src/*/*/*.hpp)
 
 # additional dependancies
 SRC_A  = makefile
 
 # project header file locations
-INC_F  = include $(sort $(dir $(wildcard include/*/)))
+INC_F  = include src $(sort $(dir $(wildcard include/*/)))
 
 # build targets
 all: $(BUILD)/$(PROJECT).bin

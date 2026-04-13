@@ -1,9 +1,18 @@
-#ifndef BASIC_INPUT_CONTROLLER_H_
-#define BASIC_INPUT_CONTROLLER_H_
+#ifndef BASIC_SRC_HARDWARE_ROBOTS_ROBOT_STATE_H_
+#define BASIC_SRC_HARDWARE_ROBOTS_ROBOT_STATE_H_
 
-namespace basic::input {
+#include "vex.h"
 
-struct ControllerState {
+namespace basic::hardware::robots {
+
+enum class IndexedMechanismMode {
+  kOff,
+  kLegacyIntake,
+  kMiddleThrow,
+  kUpperThrow,
+};
+
+struct ControllerInputState {
   int time_ms{0};
 
   int axis1{0};
@@ -58,10 +67,34 @@ struct ControllerState {
   double rating[4]{0, 0, 0, 0};
 };
 
-ControllerState get_controls_snapshot();
+struct SensorState {
+  bool initialized{false};
+  int accelerate{0};
+  char current_color_code{'N'};
+  char previous_color_code{'N'};
+  int last_update_ms{0};
+  int hold_until_ms{0};
+};
 
-void run_input_thread();
+struct ChassisState {
+  double fl{0};
+  double fr{0};
+  double bl{0};
+  double br{0};
+  vex::brakeType stop_brake_type{vex::coast};
+};
 
-}  // namespace basic::input
+struct MechanismState {
+  IndexedMechanismMode indexed_mode{IndexedMechanismMode::kOff};
+};
+
+struct RobotState {
+  ControllerInputState controller;
+  SensorState sensors;
+  ChassisState chassis;
+  MechanismState mechanism;
+};
+
+}  // namespace basic::hardware::robots
 
 #endif

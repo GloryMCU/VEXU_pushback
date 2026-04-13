@@ -10,7 +10,8 @@
 			"${vex_sdkPath}/gcc/include",
 			"${vex_sdkPath}/include/**",
 			"${workspaceFolder}/include/**",
-			"${workspaceFolder}/src/**"
+			"${workspaceFolder}/src/**",
+			"${vex_gcc}/arm-none-eabi/armv7-ar/thumb/**"
 		]
 	},
 	"configurations": [
@@ -21,7 +22,7 @@
 			],
 			"compilerPath": "${vex_compilerPath}",
 			"cStandard": "gnu99",
-			"cppStandard": "gnu++11",
+			"cppStandard": "gnu++17",
 			"intelliSenseMode": "windows-clang-x86"
 		},
 		{
@@ -31,7 +32,7 @@
 			],
 			"compilerPath": "${vex_compilerPath}",
 			"cStandard": "gnu99",
-			"cppStandard": "gnu++11",
+			"cppStandard": "gnu++17",
 			"intelliSenseMode": "macos-clang-x86"
 		},
 		{
@@ -41,7 +42,7 @@
 			],
 			"compilerPath": "",
 			"cStandard": "gnu99",
-			"cppStandard": "gnu++11",
+			"cppStandard": "gnu++17",
 			"intelliSenseMode": "linux-clang-x86"
 		}
 	],

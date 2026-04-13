@@ -1,44 +1,66 @@
-#include "hardware/robots/basic_robot.h"
+#include "hardware/robot_selector.h"
 
 #include "control/chassis.h"
-#include "hardware/robot_config.h"
+#include "control/mechanisms.h"
+#include "hardware/robot_hardware.h"
 #include "hardware/sensors.h"
+#include "hardware/robots/robot_state.h"
 #include "input/controller.h"
-#include "test/performance_tests.h"
 
-namespace basic::hardware::robots {
+namespace basic::hardware {
 
 namespace {
 
-void calibrate_inertial_sensor() {
-  basic::hardware::Inertial.calibrate();
-  while (basic::hardware::Inertial.isCalibrating()) {
-    vex::wait(5, vex::msec);
+class BasicRobot;
+BasicRobot& current_basic_robot();
+
+class BasicRobot final : public basic::app::Robot {
+ public:
+  void initialize() override {
+    hardware_.calibrate_inertial_sensor();
+    hardware_.show_calibrated();
   }
 
-  basic::hardware::Inertial.resetHeading();
-  basic::hardware::Inertial.resetRotation();
+  void start_background_tasks() override {}
+
+  void bind_competition(vex::competition& competition) override {
+    competition.drivercontrol(start_driver_control_entry);
+  }
+
+ private:
+  static void start_driver_control_entry() {
+    static vex::thread user_control_thread(run_driver_control_thread_entry);
+  }
+
+  static void run_driver_control_thread_entry() {
+    current_basic_robot().run_driver_control_loop();
+  }
+
+  void run_driver_control_loop() {
+    while (true) {
+      robots::controller_update(hardware_, state_);
+      robots::sensor_update(hardware_, state_);
+      robots::chassis_update(hardware_, state_);
+      robots::mechanism_update(hardware_, state_);
+      vex::this_thread::sleep_for(robots::kRefreshTime);
+    }
+  }
+
+  robots::RobotHardware hardware_;
+  robots::RobotState state_;
+
+  friend BasicRobot& current_basic_robot();
+};
+
+BasicRobot& current_basic_robot() {
+  static BasicRobot robot;
+  return robot;
 }
 
 }  // namespace
 
-void BasicRobot::initialize() {
-  calibrate_inertial_sensor();
-  basic::hardware::show_calibrated();
+basic::app::Robot& get_current_robot() {
+  return current_basic_robot();
 }
 
-bool BasicRobot::enter_test_mode_if_enabled() {
-  return basic::test::start_test_mode_if_enabled();
-}
-
-void BasicRobot::start_background_tasks() {
-  static vex::thread controller_task(basic::input::run_input_thread);
-  static vex::thread chassis_task(basic::control::run_chassis_thread);
-  static vex::thread sensor_task(basic::hardware::run_sensor_thread);
-}
-
-void BasicRobot::bind_competition(vex::competition& competition) {
-  competition.drivercontrol(basic::control::start_driver_control);
-}
-
-}  // namespace basic::hardware::robots
+}  // namespace basic::hardware
