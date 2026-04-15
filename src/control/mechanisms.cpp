@@ -7,11 +7,12 @@ namespace basic::hardware::robots {
 
 namespace {
 
-constexpr std::size_t kIndexedMotorCount = 6;
-constexpr std::array<int, kIndexedMotorCount> kOffSpeeds{{0, 0, 0, 0, 0, 0}};
-constexpr std::array<int, kIndexedMotorCount> kLegacyIntakeSpeeds{{0, 45, 30, 100, 45, 30}};
-constexpr std::array<int, kIndexedMotorCount> kMiddleThrowSpeeds{{45, 45, 45, 100, -60, 0}};
-constexpr std::array<int, kIndexedMotorCount> kUpperThrowSpeeds{{45, 45, 45, 100, 45, -50}};
+constexpr std::size_t kIndexedMotorCount = 7;
+constexpr std::array<int, kIndexedMotorCount> kOffSpeeds{{0, 0, 0, 0, 0, 0 ,0}};
+constexpr std::array<int, kIndexedMotorCount> kLegacyIntakeSpeeds{{0, 0, -100, 50, -100, 80 ,-70}};
+constexpr std::array<int, kIndexedMotorCount> kUnderThrowSpeeds{{-100, 100, -100, 0, 100, 0, 0}};
+constexpr std::array<int, kIndexedMotorCount> kMiddleThrowSpeeds{{-100, 100, -100, 100, -100, -100, 0}};
+constexpr std::array<int, kIndexedMotorCount> kUpperThrowSpeeds{{-100, 100, -100, 100, -100, 100, 100}};
 
 void set_motor_power(vex::motor& motor, double speed, vex::brakeType type = vex::coast) {
   if (speed) {
@@ -32,11 +33,13 @@ void toggle_indexed_mode(MechanismState& mechanism, IndexedMechanismMode request
 const std::array<int, kIndexedMotorCount>& indexed_motor_speeds(const MechanismState& mechanism) {
   switch (mechanism.indexed_mode) {
     case IndexedMechanismMode::kLegacyIntake:
-      return kLegacyIntakeSpeeds;
+      return kLegacyIntakeSpeeds;break;
+    case IndexedMechanismMode::kUnderTrow:
+      return kUnderThrowSpeeds;break;
     case IndexedMechanismMode::kMiddleThrow:
-      return kMiddleThrowSpeeds;
+      return kMiddleThrowSpeeds;break;
     case IndexedMechanismMode::kUpperThrow:
-      return kUpperThrowSpeeds;
+      return kUpperThrowSpeeds;break;
     case IndexedMechanismMode::kOff:
     default:
       return kOffSpeeds;
@@ -48,6 +51,7 @@ void apply_indexed_mode(RobotHardware& hardware, const MechanismState& mechanism
       &hardware.trans_motor1,
       &hardware.trans_motor2,
       &hardware.trans_motor3,
+      &hardware.trans_motor4,
       &hardware.under_motor1,
       &hardware.middle_motor1,
       &hardware.up_motor1,
