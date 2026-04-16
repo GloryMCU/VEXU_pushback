@@ -1,5 +1,6 @@
 #include "hardware/robot_selector.h"
 
+#include "control/autonomous/routine.h"
 #include "control/chassis.h"
 #include "control/mechanisms.h"
 #include "control/motor_control.h"
@@ -26,12 +27,17 @@ class BasicRobot final : public basic::app::Robot {
 
   void bind_competition(vex::competition& competition) override {
     competition_ = &competition;
+    competition.autonomous(start_autonomous_entry);
     competition.drivercontrol(start_driver_control_entry);
   }
 
  private:
   static void start_driver_control_entry() {
     current_basic_robot().run_driver_control_loop();
+  }
+
+  static void start_autonomous_entry() {
+    current_basic_robot().run_autonomous_routine();
   }
 
   void run_driver_control_loop() {
@@ -43,16 +49,26 @@ class BasicRobot final : public basic::app::Robot {
       vex::this_thread::sleep_for(robots::kRefreshTime);
     }
 
-    stop_all_outputs();
+    stop_all_outputs(vex::coast);
+  }
+
+  void run_autonomous_routine() {
+    if (competition_ == nullptr) {
+      return;
+    }
+
+    robots::autonomous::run_routine(hardware_, state_, *competition_);
+    stop_all_outputs(vex::hold);
   }
 
   bool should_run_driver_control() const {
     return competition_ != nullptr && competition_->isEnabled() && competition_->isDriverControl();
   }
 
-  void stop_all_outputs() {
+  void stop_all_outputs(vex::brakeType drive_brake_type) {
     state_.controller = robots::ControllerInputState{};
     state_.chassis = robots::ChassisState{};
+    state_.chassis.stop_brake_type = drive_brake_type;
     state_.mechanism = robots::MechanismState{};
 
     robots::stopcontrol(hardware_.motor_fl1, state_.chassis.stop_brake_type);
