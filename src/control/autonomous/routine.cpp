@@ -18,8 +18,9 @@ constexpr double kTurnToleranceDegrees = 1.5;
 constexpr double kDriveProportionalGain = 30.0;
 constexpr double kDriveMinSpeedPct = 12.0;
 constexpr double kDriveMaxSpeedPct = 22.5;
-constexpr double kDriveHeadingProportionalGain = 1.0;
-constexpr double kDriveHeadingCorrectionMaxPct = 6.0;
+constexpr double kDriveHeadingProportionalGain = 0.6;
+constexpr double kDriveHeadingCorrectionMaxPct = 4.0;
+constexpr double kDriveHeadingCorrectionSpeedRatio = 0.2;
 constexpr double kDriveHeadingDeadbandDegrees = 1.0;
 constexpr double kTurnProportionalGain = 0.6;
 constexpr double kTurnMinSpeedPct = 10.0;
@@ -109,14 +110,17 @@ double clamp_correction(double correction_pct, double max_abs_correction_pct) {
   return std::min(std::max(correction_pct, -max_abs_correction_pct), max_abs_correction_pct);
 }
 
-double drive_heading_correction_pct(double heading_error_degrees) {
+double drive_heading_correction_pct(double heading_error_degrees, double drive_speed_pct) {
   if (std::fabs(heading_error_degrees) <= kDriveHeadingDeadbandDegrees) {
     return 0.0;
   }
 
+  const double scaled_max_correction_pct = std::min(
+      kDriveHeadingCorrectionMaxPct,
+      std::fabs(drive_speed_pct) * kDriveHeadingCorrectionSpeedRatio);
   return clamp_correction(
       heading_error_degrees * kDriveHeadingProportionalGain,
-      kDriveHeadingCorrectionMaxPct);
+      scaled_max_correction_pct);
 }
 
 double deg_to_rad(double angle_deg) {
@@ -207,10 +211,11 @@ void drive_distance_mm(
         remaining_revolutions * kDriveProportionalGain,
         kDriveMinSpeedPct,
         kDriveMaxSpeedPct);
+    const double drive_speed_pct = direction * speed_pct;
     const double heading_error_degrees = normalize_angle_deg(
         state.autonomous.target_heading_deg - current_heading_degrees);
-    const double heading_correction_pct = drive_heading_correction_pct(heading_error_degrees);
-    const double drive_speed_pct = direction * speed_pct;
+    const double heading_correction_pct =
+        drive_heading_correction_pct(heading_error_degrees, drive_speed_pct);
     set_drive_power(
         hardware,
         drive_speed_pct + 0.5 * heading_correction_pct,
@@ -266,7 +271,7 @@ void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& c
   state.chassis.stop_brake_type = vex::hold;
   reset_autonomous_frame(hardware, state);
 
-  drive_distance_mm(hardware, state, competition, 720.0);
+  drive_distance_mm(hardware, state, competition, 730.0);
   turn_deg(hardware, state, competition, -90.0);
   drive_distance_mm(hardware, state, competition, 377.0);
   drive_distance_mm(hardware, state, competition, -320.0);
