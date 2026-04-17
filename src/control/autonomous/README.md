@@ -76,18 +76,21 @@ namespace basic::hardware::robots::autonomous
 
 ## 转向控制怎么做
 
-转向由 `turn_left_deg()` 负责。
+转向由 `turn_deg()` 负责。
 
 核心思路：
 
 1. 开始转向前调用 `inertial.resetRotation()`
-2. 左侧电机反转，右侧电机正转，实现原地左转
-3. 用 IMU 的 `rotation(deg)` 读取当前已转角度
-4. 用
+2. `turn_deg()` 约定：
+   - 正角度表示左转
+   - 负角度表示右转
+3. 左右轮反向驱动，实现原地转向
+4. 用 IMU 的 `rotation(deg)` 读取当前已转角度绝对值
+5. 用
    `剩余角度 * 比例系数`
    计算转向速度
-5. 速度同样限制在最小值和最大值之间
-6. 进入角度容差后停车，并用 `hold` 刹车保持
+6. 如果已经冲过目标角度，会自动反向小幅修正，而不是直接结束
+7. 连续多个控制周期都落在角度容差内，才判定这次转向完成
 
 这里没有用轮子圈数直接算转角，原因是转角不仅和轮子转了多少有关，还和底盘轮距有关。当前仓库里没有单独维护这类底盘几何参数，所以直接用 IMU 更稳。
 
@@ -114,6 +117,8 @@ namespace basic::hardware::robots::autonomous
   - 直线圈数容差
 - `kTurnToleranceDegrees = 1.5`
   - 转向角度容差
+- `kTurnSettleCycles = 5`
+  - 转向进入容差后需要连续稳定的周期数
 - `kDriveProportionalGain = 30.0`
   - 直线比例系数
 - `kDriveMinSpeedPct = 12.0`
@@ -139,12 +144,13 @@ namespace basic::hardware::robots::autonomous
 - 直线走不动或者末端太慢
   - 增大 `kDriveMinSpeedPct`
 
-- 左转冲过头
+- 转向冲过头
   - 先减小 `kTurnMaxSpeedPct`
   - 再减小 `kTurnProportionalGain`
   - 必要时增大 `kTurnToleranceDegrees`
+  - 也可以略微增大 `kTurnSettleCycles`
 
-- 左转停得太早
+- 转向停得太早
   - 减小 `kTurnToleranceDegrees`
   - 或者略微增大 `kTurnMinSpeedPct`
 
@@ -153,13 +159,12 @@ namespace basic::hardware::robots::autonomous
 这版自动控制是一个轻量级可用版本，不是完整运动学控制器。当前已知限制：
 
 - 直线只看电机平均圈数，没有做左右纠偏
-- 转向只支持左转接口，右转还没抽成通用函数
 - 没有加速度规划，只有简单比例减速
 - 没有把动作序列抽象成通用指令表，当前是固定写死的 4 段流程
 
 如果后面要继续扩展，建议下一步做这几件事：
 
-1. 把左转/右转统一成 `turn_deg(double angle_deg)`
-2. 给直线增加 IMU 保直
-3. 把动作序列改成可配置的 step 列表
+1. 给直线增加 IMU 保直
+2. 把动作序列改成可配置的 step 列表
+3. 给转向补超时/卡住保护
 4. 视需要再上更完整的 PID 或 ADRC

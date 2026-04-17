@@ -14,6 +14,7 @@ constexpr int kAutonomousLoopDelayMs = 10;
 constexpr int kAutonomousSettleDelayMs = 150;
 constexpr double kDriveToleranceRevolutions = 0.03;
 constexpr double kTurnToleranceDegrees = 1.5;
+constexpr int kTurnSettleCycles = 5;
 constexpr double kDriveProportionalGain = 30.0;
 constexpr double kDriveMinSpeedPct = 12.0;
 constexpr double kDriveMaxSpeedPct = 45.0;
@@ -129,24 +130,37 @@ void drive_distance_mm(RobotHardware& hardware, vex::competition& competition, d
   settle_after_motion();
 }
 
-void turn_left_deg(RobotHardware& hardware, vex::competition& competition, double target_degrees) {
-  if (!should_run_autonomous(competition) || target_degrees <= 0.0) {
+void turn_deg(RobotHardware& hardware, vex::competition& competition, double target_degrees) {
+  if (!should_run_autonomous(competition) || target_degrees == 0.0) {
     return;
   }
+
+  const double target_magnitude = std::fabs(target_degrees);
+  const double requested_direction = target_degrees > 0.0 ? 1.0 : -1.0;
+  int settled_cycles = 0;
 
   hardware.inertial.resetRotation();
   while (should_run_autonomous(competition)) {
     const double turned_degrees = std::fabs(hardware.inertial.rotation(vex::deg));
-    const double remaining_degrees = target_degrees - turned_degrees;
-    if (remaining_degrees <= kTurnToleranceDegrees) {
-      break;
+    const double remaining_degrees = target_magnitude - turned_degrees;
+    if (std::fabs(remaining_degrees) <= kTurnToleranceDegrees) {
+      stop_drive(hardware, vex::hold);
+      ++settled_cycles;
+      if (settled_cycles >= kTurnSettleCycles) {
+        break;
+      }
+
+      vex::this_thread::sleep_for(kAutonomousLoopDelayMs);
+      continue;
     }
 
+    settled_cycles = 0;
     const double speed_pct = clamp_speed(
-        remaining_degrees * kTurnProportionalGain,
+        std::fabs(remaining_degrees) * kTurnProportionalGain,
         kTurnMinSpeedPct,
         kTurnMaxSpeedPct);
-    set_drive_power(hardware, -speed_pct, speed_pct);
+    const double correction_direction = remaining_degrees > 0.0 ? requested_direction : -requested_direction;
+    set_drive_power(hardware, -correction_direction * speed_pct, correction_direction * speed_pct);
     vex::this_thread::sleep_for(kAutonomousLoopDelayMs);
   }
 
@@ -160,7 +174,7 @@ void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& c
   state.chassis.stop_brake_type = vex::hold;
 
   drive_distance_mm(hardware, competition, 600.0);
-  turn_left_deg(hardware, competition, 90.0);
+  turn_deg(hardware, competition, 90.0);
   drive_distance_mm(hardware, competition, 467.0);
   drive_distance_mm(hardware, competition, -1027.0);
 
