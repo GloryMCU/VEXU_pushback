@@ -14,13 +14,18 @@ constexpr int kAutonomousLoopDelayMs = 10;
 constexpr int kAutonomousSettleDelayMs = 150;
 constexpr double kDriveToleranceRevolutions = 0.03;
 constexpr double kTurnToleranceDegrees = 1.5;
-constexpr int kTurnSettleCycles = 5;
 constexpr double kDriveProportionalGain = 30.0;
 constexpr double kDriveMinSpeedPct = 12.0;
-constexpr double kDriveMaxSpeedPct = 45.0;
+constexpr double kDriveMaxSpeedPct = 22.5;
+constexpr double kDriveHeadingProportionalGain = 1.0;
+constexpr double kDriveHeadingCorrectionMaxPct = 6.0;
 constexpr double kTurnProportionalGain = 0.6;
 constexpr double kTurnMinSpeedPct = 10.0;
+constexpr double kTurnApproachMinSpeedPct = 4.0;
 constexpr double kTurnMaxSpeedPct = 30.0;
+constexpr double kTurnApproachWindowDegrees = 12.0;
+constexpr int kTurnBaseTimeoutMs = 1000;
+constexpr int kTurnTimeoutPerDegreeMs = 50;
 
 using DriveMotorArray = std::array<vex::motor*, 8>;
 using DriveSample = std::array<double, 8>;
@@ -98,6 +103,22 @@ double clamp_speed(double speed_pct, double min_speed_pct, double max_speed_pct)
   return std::min(std::max(speed_pct, min_speed_pct), max_speed_pct);
 }
 
+double clamp_correction(double correction_pct, double max_abs_correction_pct) {
+  return std::min(std::max(correction_pct, -max_abs_correction_pct), max_abs_correction_pct);
+}
+
+double turn_timeout_ms(double target_degrees) {
+  return kTurnBaseTimeoutMs +
+         std::ceil(std::fabs(target_degrees) * static_cast<double>(kTurnTimeoutPerDegreeMs));
+}
+
+double turn_speed_pct(double error_degrees) {
+  const double abs_error_degrees = std::fabs(error_degrees);
+  const double min_speed_pct =
+      abs_error_degrees > kTurnApproachWindowDegrees ? kTurnMinSpeedPct : kTurnApproachMinSpeedPct;
+  return clamp_speed(abs_error_degrees * kTurnProportionalGain, min_speed_pct, kTurnMaxSpeedPct);
+}
+
 void settle_after_motion() {
   vex::this_thread::sleep_for(kAutonomousSettleDelayMs);
 }
@@ -110,6 +131,7 @@ void drive_distance_mm(RobotHardware& hardware, vex::competition& competition, d
   const double direction = distance_mm > 0.0 ? 1.0 : -1.0;
   const double target_revolutions = std::fabs(distance_mm) / kMillimetersPerWheelRevolution;
   const DriveSample start_sample = sample_drive_revolutions(hardware);
+  const double start_heading_degrees = hardware.inertial.rotation(vex::deg);
 
   while (should_run_autonomous(competition)) {
     const double traveled_revolutions = average_drive_delta_revolutions(hardware, start_sample);
@@ -122,7 +144,15 @@ void drive_distance_mm(RobotHardware& hardware, vex::competition& competition, d
         remaining_revolutions * kDriveProportionalGain,
         kDriveMinSpeedPct,
         kDriveMaxSpeedPct);
-    set_drive_power(hardware, direction * speed_pct, direction * speed_pct);
+    const double heading_error_degrees = hardware.inertial.rotation(vex::deg) - start_heading_degrees;
+    const double heading_correction_pct = clamp_correction(
+        heading_error_degrees * kDriveHeadingProportionalGain,
+        kDriveHeadingCorrectionMaxPct);
+    const double drive_speed_pct = direction * speed_pct;
+    set_drive_power(
+        hardware,
+        drive_speed_pct + heading_correction_pct,
+        drive_speed_pct - heading_correction_pct);
     vex::this_thread::sleep_for(kAutonomousLoopDelayMs);
   }
 
@@ -135,32 +165,23 @@ void turn_deg(RobotHardware& hardware, vex::competition& competition, double tar
     return;
   }
 
-  const double target_magnitude = std::fabs(target_degrees);
-  const double requested_direction = target_degrees > 0.0 ? 1.0 : -1.0;
-  int settled_cycles = 0;
-
   hardware.inertial.resetRotation();
+  const int turn_start_ms = hardware.brain.timer(vex::msec);
+  const double timeout_ms = turn_timeout_ms(target_degrees);
   while (should_run_autonomous(competition)) {
-    const double turned_degrees = std::fabs(hardware.inertial.rotation(vex::deg));
-    const double remaining_degrees = target_magnitude - turned_degrees;
-    if (std::fabs(remaining_degrees) <= kTurnToleranceDegrees) {
-      stop_drive(hardware, vex::hold);
-      ++settled_cycles;
-      if (settled_cycles >= kTurnSettleCycles) {
-        break;
-      }
-
-      vex::this_thread::sleep_for(kAutonomousLoopDelayMs);
-      continue;
+    const int elapsed_ms = hardware.brain.timer(vex::msec) - turn_start_ms;
+    if (elapsed_ms >= timeout_ms) {
+      break;
     }
 
-    settled_cycles = 0;
-    const double speed_pct = clamp_speed(
-        std::fabs(remaining_degrees) * kTurnProportionalGain,
-        kTurnMinSpeedPct,
-        kTurnMaxSpeedPct);
-    const double correction_direction = remaining_degrees > 0.0 ? requested_direction : -requested_direction;
-    set_drive_power(hardware, -correction_direction * speed_pct, correction_direction * speed_pct);
+    const double error_degrees = target_degrees - hardware.inertial.rotation(vex::deg);
+    if (std::fabs(error_degrees) <= kTurnToleranceDegrees) {
+      break;
+    }
+
+    const double speed_pct = turn_speed_pct(error_degrees);
+    const double direction = error_degrees > 0.0 ? 1.0 : -1.0;
+    set_drive_power(hardware, -direction * speed_pct, direction * speed_pct);
     vex::this_thread::sleep_for(kAutonomousLoopDelayMs);
   }
 
