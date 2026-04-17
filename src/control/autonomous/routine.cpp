@@ -203,10 +203,10 @@ void turn_deg(RobotHardware& hardware, vex::competition& competition, double tar
 void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& competition) {
   state.chassis.stop_brake_type = vex::hold;
 
-  drive_distance_mm(hardware, competition, 600.0);
+  drive_distance_mm(hardware, competition, 790.0);
   turn_deg(hardware, competition, -90.0);
   drive_distance_mm(hardware, competition, 467.0);
-  drive_distance_mm(hardware, competition, -1027.0);
+  drive_distance_mm(hardware, competition, -662.0);
 
   stop_drive(hardware, vex::hold);
 }
