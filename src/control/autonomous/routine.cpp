@@ -273,8 +273,8 @@ void drive_distance_mm(
         drive_heading_correction_pct(heading_error_degrees, drive_speed_pct);
     set_drive_power(
         hardware,
-        drive_speed_pct + heading_correction_pct,
-        drive_speed_pct - heading_correction_pct);
+        drive_speed_pct + 0.5 * heading_correction_pct,
+        drive_speed_pct - 0.5 * heading_correction_pct);
     vex::this_thread::sleep_for(kAutonomousLoopDelayMs);
   }
 
@@ -403,10 +403,10 @@ void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& c
 
   drive_distance_mm(hardware, state, competition, 730.0);
   turn_deg(hardware, state, competition, -90.0);
-  drive_distance_mm(hardware, state, competition, 397.0);
+  drive_distance_mm(hardware, state, competition, 377.0);
   drive_distance_mm(hardware, state, competition, -320.0);
   turn_deg(hardware, state, competition, 180.0);
-  drive_distance_mm(hardware, state, competition, -342.0);
+  drive_distance_mm(hardware, state, competition, 342.0);
 
   stop_drive(hardware, vex::hold);
 }
