@@ -19,6 +19,7 @@ constexpr double kDriveMinSpeedPct = 12.0;
 constexpr double kDriveMaxSpeedPct = 22.5;
 constexpr double kDriveHeadingProportionalGain = 1.0;
 constexpr double kDriveHeadingCorrectionMaxPct = 6.0;
+constexpr double kDriveHeadingDeadbandDegrees = 1.0;
 constexpr double kTurnProportionalGain = 0.6;
 constexpr double kTurnMinSpeedPct = 10.0;
 constexpr double kTurnApproachMinSpeedPct = 4.0;
@@ -107,6 +108,16 @@ double clamp_correction(double correction_pct, double max_abs_correction_pct) {
   return std::min(std::max(correction_pct, -max_abs_correction_pct), max_abs_correction_pct);
 }
 
+double drive_heading_correction_pct(double heading_error_degrees) {
+  if (std::fabs(heading_error_degrees) <= kDriveHeadingDeadbandDegrees) {
+    return 0.0;
+  }
+
+  return clamp_correction(
+      heading_error_degrees * kDriveHeadingProportionalGain,
+      kDriveHeadingCorrectionMaxPct);
+}
+
 double turn_timeout_ms(double target_degrees) {
   return kTurnBaseTimeoutMs +
          std::ceil(std::fabs(target_degrees) * static_cast<double>(kTurnTimeoutPerDegreeMs));
@@ -145,14 +156,12 @@ void drive_distance_mm(RobotHardware& hardware, vex::competition& competition, d
         kDriveMinSpeedPct,
         kDriveMaxSpeedPct);
     const double heading_error_degrees = hardware.inertial.rotation(vex::deg) - start_heading_degrees;
-    const double heading_correction_pct = clamp_correction(
-        heading_error_degrees * kDriveHeadingProportionalGain,
-        kDriveHeadingCorrectionMaxPct);
+    const double heading_correction_pct = drive_heading_correction_pct(heading_error_degrees);
     const double drive_speed_pct = direction * speed_pct;
     set_drive_power(
         hardware,
-        drive_speed_pct + heading_correction_pct,
-        drive_speed_pct - heading_correction_pct);
+        drive_speed_pct - heading_correction_pct,
+        drive_speed_pct + heading_correction_pct);
     vex::this_thread::sleep_for(kAutonomousLoopDelayMs);
   }
 
@@ -181,7 +190,7 @@ void turn_deg(RobotHardware& hardware, vex::competition& competition, double tar
 
     const double speed_pct = turn_speed_pct(error_degrees);
     const double direction = error_degrees > 0.0 ? 1.0 : -1.0;
-    set_drive_power(hardware, -direction * speed_pct, direction * speed_pct);
+    set_drive_power(hardware, direction * speed_pct, -direction * speed_pct);
     vex::this_thread::sleep_for(kAutonomousLoopDelayMs);
   }
 
@@ -195,7 +204,7 @@ void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& c
   state.chassis.stop_brake_type = vex::hold;
 
   drive_distance_mm(hardware, competition, 600.0);
-  turn_deg(hardware, competition, 90.0);
+  turn_deg(hardware, competition, -90.0);
   drive_distance_mm(hardware, competition, 467.0);
   drive_distance_mm(hardware, competition, -1027.0);
 

@@ -65,10 +65,11 @@ namespace basic::hardware::robots::autonomous
    计算速度。
 7. 记录这段直线开始时的 IMU 朝向，循环中持续比较当前朝向和起始朝向的偏差。
 8. 用朝向偏差乘以保直比例系数，生成左右轮差速修正，让车尽量沿着起始朝向走直线。
-9. 速度限制在最小值和最大值之间，保证：
+9. 当朝向偏差很小的时候，不做修正，避免 IMU 微小抖动导致电机来回波动。
+10. 速度限制在最小值和最大值之间，保证：
    - 距离远时不会太快
    - 临近目标时还能继续推进，不会太早停住
-10. 到达容差后停车，并用 `hold` 刹车保持。
+11. 到达容差后停车，并用 `hold` 刹车保持。
 
 为什么取 8 个电机的平均值：
 
@@ -133,6 +134,8 @@ namespace basic::hardware::robots::autonomous
   - 直线保直比例系数
 - `kDriveHeadingCorrectionMaxPct = 6.0`
   - 直线保直允许施加的最大左右差速修正
+- `kDriveHeadingDeadbandDegrees = 1.0`
+  - 直线保直的角度死区，小偏差时不纠偏
 - `kTurnProportionalGain = 0.6`
   - 转向比例系数
 - `kTurnMinSpeedPct = 10.0`
@@ -167,6 +170,10 @@ namespace basic::hardware::robots::autonomous
 - 直线纠偏过猛，出现左右摆
   - 先减小 `kDriveHeadingProportionalGain`
   - 再减小 `kDriveHeadingCorrectionMaxPct`
+
+- 直线电机有明显来回抽动
+  - 先增大 `kDriveHeadingDeadbandDegrees`
+  - 还可以略微减小 `kDriveHeadingProportionalGain`
 
 - 转向冲过头
   - 先减小 `kTurnMaxSpeedPct`
