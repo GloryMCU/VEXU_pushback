@@ -38,6 +38,7 @@ struct RobotHardware {
 
 
   vex::motor serial_sensor{vex::PORT9, vex::ratio6_1, true};
+  vex::distance laser_rangefinder{vex::PORT4};
   vex::brain brain;
   vex::controller controller{vex::controllerType::primary};
   vex::inertial inertial{vex::PORT11};

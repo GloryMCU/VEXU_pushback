@@ -2,6 +2,7 @@
 
 #include "control/motor_control.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 
@@ -15,13 +16,21 @@ constexpr int kAutonomousLoopDelayMs = 10;
 constexpr int kAutonomousSettleDelayMs = 150;
 constexpr double kDriveToleranceRevolutions = 0.03;
 constexpr double kTurnToleranceDegrees = 1.5;
-constexpr double kDriveProportionalGain = 30.0;
 constexpr double kDriveMinSpeedPct = 12.0;
 constexpr double kDriveMaxSpeedPct = 22.5;
+constexpr double kDriveAccelerationWindowMm = 180.0;
+constexpr double kDriveDecelerationWindowMm = 260.0;
 constexpr double kDriveHeadingProportionalGain = 0.6;
 constexpr double kDriveHeadingCorrectionMaxPct = 4.0;
 constexpr double kDriveHeadingCorrectionSpeedRatio = 0.2;
 constexpr double kDriveHeadingDeadbandDegrees = 1.0;
+constexpr double kLaserDistanceToleranceMm = 10.0;
+constexpr double kLaserDistanceMinSpeedPct = 6.0;
+constexpr double kLaserDistanceMaxSpeedPct = 18.0;
+constexpr double kLaserDistanceAccelerationWindowMm = 120.0;
+constexpr double kLaserDistanceDecelerationWindowMm = 180.0;
+constexpr int kLaserDistanceBaseTimeoutMs = 1200;
+constexpr int kLaserDistanceTimeoutPerMm = 4;
 constexpr double kTurnProportionalGain = 0.6;
 constexpr double kTurnMinSpeedPct = 10.0;
 constexpr double kTurnApproachMinSpeedPct = 4.0;
@@ -106,8 +115,35 @@ double clamp_speed(double speed_pct, double min_speed_pct, double max_speed_pct)
   return std::min(std::max(speed_pct, min_speed_pct), max_speed_pct);
 }
 
+double clamp_unit_interval(double value) {
+  return std::min(std::max(value, 0.0), 1.0);
+}
+
 double clamp_correction(double correction_pct, double max_abs_correction_pct) {
   return std::min(std::max(correction_pct, -max_abs_correction_pct), max_abs_correction_pct);
+}
+
+double smoothstep01(double value) {
+  const double clamped = clamp_unit_interval(value);
+  return clamped * clamped * (3.0 - 2.0 * clamped);
+}
+
+double planned_linear_speed_pct(
+    double traveled_mm,
+    double remaining_mm,
+    double min_speed_pct,
+    double max_speed_pct,
+    double acceleration_window_mm,
+    double deceleration_window_mm) {
+  const double accel_ratio = acceleration_window_mm > 0.0
+                                 ? smoothstep01(traveled_mm / acceleration_window_mm)
+                                 : 1.0;
+  const double decel_ratio = deceleration_window_mm > 0.0
+                                 ? smoothstep01(remaining_mm / deceleration_window_mm)
+                                 : 1.0;
+  const double accel_cap_pct = min_speed_pct + (max_speed_pct - min_speed_pct) * accel_ratio;
+  const double decel_cap_pct = min_speed_pct + (max_speed_pct - min_speed_pct) * decel_ratio;
+  return std::min(accel_cap_pct, decel_cap_pct);
 }
 
 double drive_heading_correction_pct(double heading_error_degrees, double drive_speed_pct) {
@@ -164,6 +200,20 @@ double turn_timeout_ms(double target_degrees) {
          std::ceil(std::fabs(target_degrees) * static_cast<double>(kTurnTimeoutPerDegreeMs));
 }
 
+double laser_distance_timeout_ms(double distance_error_mm) {
+  return kLaserDistanceBaseTimeoutMs +
+         std::ceil(std::fabs(distance_error_mm) * static_cast<double>(kLaserDistanceTimeoutPerMm));
+}
+
+bool try_read_laser_distance_mm(RobotHardware& hardware, double& measured_distance_mm) {
+  if (!hardware.laser_rangefinder.installed() || !hardware.laser_rangefinder.isObjectDetected()) {
+    return false;
+  }
+
+  measured_distance_mm = hardware.laser_rangefinder.objectDistance(vex::distanceUnits::mm);
+  return std::isfinite(measured_distance_mm) && measured_distance_mm > 0.0;
+}
+
 double turn_speed_pct(double error_degrees) {
   const double abs_error_degrees = std::fabs(error_degrees);
   const double min_speed_pct =
@@ -207,10 +257,15 @@ void drive_distance_mm(
       break;
     }
 
-    const double speed_pct = clamp_speed(
-        remaining_revolutions * kDriveProportionalGain,
+    const double traveled_mm = traveled_revolutions * kMillimetersPerWheelRevolution;
+    const double remaining_mm = remaining_revolutions * kMillimetersPerWheelRevolution;
+    const double speed_pct = planned_linear_speed_pct(
+        traveled_mm,
+        remaining_mm,
         kDriveMinSpeedPct,
-        kDriveMaxSpeedPct);
+        kDriveMaxSpeedPct,
+        kDriveAccelerationWindowMm,
+        kDriveDecelerationWindowMm);
     const double drive_speed_pct = direction * speed_pct;
     const double heading_error_degrees = normalize_angle_deg(
         state.autonomous.target_heading_deg - current_heading_degrees);
@@ -266,6 +321,81 @@ void turn_deg(
 }
 
 }  // namespace
+
+void drive_to_laser_distance_mm(
+    RobotHardware& hardware,
+    RobotState& state,
+    vex::competition& competition,
+    double target_distance_mm) {
+  if (!should_run_autonomous(competition) || target_distance_mm <= 0.0) {
+    return;
+  }
+
+  ensure_autonomous_frame(hardware, state);
+
+  double measured_distance_mm = 0.0;
+  if (!try_read_laser_distance_mm(hardware, measured_distance_mm)) {
+    stop_drive(hardware, vex::hold);
+    return;
+  }
+
+  const DriveSample start_sample = sample_drive_revolutions(hardware);
+  double previous_traveled_revolutions = 0.0;
+  const int motion_start_ms = hardware.brain.timer(vex::msec);
+  const double initial_distance_error_mm = std::fabs(measured_distance_mm - target_distance_mm);
+  const double timeout_ms = laser_distance_timeout_ms(measured_distance_mm - target_distance_mm);
+
+  while (should_run_autonomous(competition)) {
+    const int elapsed_ms = hardware.brain.timer(vex::msec) - motion_start_ms;
+    if (elapsed_ms >= timeout_ms) {
+      break;
+    }
+
+    if (!try_read_laser_distance_mm(hardware, measured_distance_mm)) {
+      break;
+    }
+
+    const double current_heading_degrees = current_heading_deg(hardware);
+    const double traveled_revolutions = average_drive_delta_revolutions(hardware, start_sample);
+    const double traveled_delta_revolutions = traveled_revolutions - previous_traveled_revolutions;
+    if (traveled_delta_revolutions > 0.0) {
+      const double drive_direction = measured_distance_mm > target_distance_mm ? 1.0 : -1.0;
+      update_autonomous_pose(
+          state,
+          drive_direction * traveled_delta_revolutions * kMillimetersPerWheelRevolution,
+          current_heading_degrees);
+      previous_traveled_revolutions = traveled_revolutions;
+    }
+
+    const double distance_error_mm = measured_distance_mm - target_distance_mm;
+    if (std::fabs(distance_error_mm) <= kLaserDistanceToleranceMm) {
+      break;
+    }
+
+    const double traveled_toward_target_mm =
+        std::max(0.0, initial_distance_error_mm - std::fabs(distance_error_mm));
+    const double drive_speed_pct = distance_error_mm > 0.0 ? 1.0 : -1.0;
+    const double commanded_speed_pct = drive_speed_pct * planned_linear_speed_pct(
+        traveled_toward_target_mm,
+        std::fabs(distance_error_mm),
+        kLaserDistanceMinSpeedPct,
+        kLaserDistanceMaxSpeedPct,
+        kLaserDistanceAccelerationWindowMm,
+        kLaserDistanceDecelerationWindowMm);
+    const double heading_error_degrees = normalize_angle_deg(
+        state.autonomous.target_heading_deg - current_heading_degrees);
+    const double heading_correction_pct =
+        drive_heading_correction_pct(heading_error_degrees, commanded_speed_pct);
+    set_drive_power(
+        hardware,
+        commanded_speed_pct + heading_correction_pct,
+        commanded_speed_pct - heading_correction_pct);
+    vex::this_thread::sleep_for(kAutonomousLoopDelayMs);
+  }
+
+  stop_drive(hardware, vex::hold);
+  settle_after_motion();
+}
 
 void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& competition) {
   state.chassis.stop_brake_type = vex::hold;

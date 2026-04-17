@@ -63,18 +63,17 @@ namespace basic::hardware::robots::autonomous
    `当前圈数 - 起始圈数`
    的绝对值。
 5. 对 8 个电机取平均，作为当前已经走过的圈数。
-6. 用
-   `剩余圈数 * 比例系数`
-   计算速度。
-7. 自动开始时只建立一次全局 IMU 参考，维护一份共享的目标航向。
-8. 直线段不再把“当前起始角”当作局部目标，而是直接跟踪这份全局目标航向。
-9. 用当前航向和目标航向的误差乘以保直比例系数，生成左右轮差速修正，让车沿着全局目标方向走直线。
-10. 保直修正的上限会跟当前直线速度联动，低速时自动收紧，避免动作切换时修正过猛。
-11. 当航向偏差很小的时候，不做修正，避免 IMU 微小抖动导致电机来回波动。
-12. 速度限制在最小值和最大值之间，保证：
+6. 直线速度不再直接由剩余距离线性决定，而是使用平滑梯形速度规划。
+7. 起步阶段按加速窗口逐步提速，中段允许进入巡航，末端按减速窗口平滑收速。
+8. 自动开始时只建立一次全局 IMU 参考，维护一份共享的目标航向。
+9. 直线段不再把“当前起始角”当作局部目标，而是直接跟踪这份全局目标航向。
+10. 用当前航向和目标航向的误差乘以保直比例系数，生成左右轮差速修正，让车沿着全局目标方向走直线。
+11. 保直修正的上限会跟当前直线速度联动，低速时自动收紧，避免动作切换时修正过猛。
+12. 当航向偏差很小的时候，不做修正，避免 IMU 微小抖动导致电机来回波动。
+13. 速度限制在最小值和最大值之间，保证：
    - 距离远时不会太快
    - 临近目标时还能继续推进，不会太早停住
-13. 到达容差后停车，并用 `hold` 刹车保持，同时更新简化的全局位姿估计。
+14. 到达容差后停车，并用 `hold` 刹车保持，同时更新简化的全局位姿估计。
 
 为什么取 8 个电机的平均值：
 
@@ -131,12 +130,14 @@ namespace basic::hardware::robots::autonomous
   - 直线圈数容差
 - `kTurnToleranceDegrees = 1.5`
   - 转向角度容差
-- `kDriveProportionalGain = 30.0`
-  - 直线比例系数
 - `kDriveMinSpeedPct = 12.0`
   - 直线最小速度
 - `kDriveMaxSpeedPct = 22.5`
   - 直线最大速度
+- `kDriveAccelerationWindowMm = 180.0`
+  - 直线加速窗口长度
+- `kDriveDecelerationWindowMm = 260.0`
+  - 直线减速窗口长度
 - `kDriveHeadingProportionalGain = 0.6`
   - 直线保直比例系数
 - `kDriveHeadingCorrectionMaxPct = 4.0`
@@ -145,6 +146,14 @@ namespace basic::hardware::robots::autonomous
   - 直线保直相对当前前进速度的修正上限比例
 - `kDriveHeadingDeadbandDegrees = 1.0`
   - 直线保直的角度死区，小偏差时不纠偏
+- `kLaserDistanceMinSpeedPct = 6.0`
+  - 激光定距直线的最小速度
+- `kLaserDistanceMaxSpeedPct = 18.0`
+  - 激光定距直线的最大速度
+- `kLaserDistanceAccelerationWindowMm = 120.0`
+  - 激光定距直线的加速窗口长度
+- `kLaserDistanceDecelerationWindowMm = 180.0`
+  - 激光定距直线的减速窗口长度
 - `kTurnProportionalGain = 0.6`
   - 转向比例系数
 - `kTurnMinSpeedPct = 10.0`
@@ -166,11 +175,20 @@ namespace basic::hardware::robots::autonomous
 
 - 直线冲过头
   - 先减小 `kDriveMaxSpeedPct`
-  - 再减小 `kDriveProportionalGain`
+  - 再增大 `kDriveDecelerationWindowMm`
   - 必要时增大 `kDriveToleranceRevolutions`
 
 - 直线走不动或者末端太慢
   - 增大 `kDriveMinSpeedPct`
+  - 或者减小 `kDriveDecelerationWindowMm`
+
+- 直线起步太冲
+  - 先减小 `kDriveMaxSpeedPct`
+  - 再增大 `kDriveAccelerationWindowMm`
+
+- 直线巡航起来太慢
+  - 先减小 `kDriveAccelerationWindowMm`
+  - 再增大 `kDriveMaxSpeedPct`
 
 - 直线容易跑偏
   - 先增大 `kDriveHeadingProportionalGain`

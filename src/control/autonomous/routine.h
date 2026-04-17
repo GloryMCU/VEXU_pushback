@@ -6,6 +6,12 @@
 
 namespace basic::hardware::robots::autonomous {
 
+void drive_to_laser_distance_mm(
+    RobotHardware& hardware,
+    RobotState& state,
+    vex::competition& competition,
+    double target_distance_mm);
+
 void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& competition);
 
 }  // namespace basic::hardware::robots::autonomous
