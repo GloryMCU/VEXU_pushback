@@ -40,7 +40,7 @@ struct RobotHardware {
   vex::motor serial_sensor{vex::PORT9, vex::ratio6_1, true};
   vex::brain brain;
   vex::controller controller{vex::controllerType::primary};
-  vex::inertial inertial{vex::PORT4};
+  vex::inertial inertial{vex::PORT11};
 
   void calibrate_inertial_sensor() {
     inertial.calibrate();
