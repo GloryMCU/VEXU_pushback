@@ -79,6 +79,7 @@ namespace basic::hardware::robots::autonomous
 ## 转向控制怎么做
 
 转向由 `turn_deg()` 负责。
+正向为右向
 
 核心思路：
 

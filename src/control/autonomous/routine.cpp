@@ -181,7 +181,7 @@ void turn_deg(RobotHardware& hardware, vex::competition& competition, double tar
 
     const double speed_pct = turn_speed_pct(error_degrees);
     const double direction = error_degrees > 0.0 ? 1.0 : -1.0;
-    set_drive_power(hardware, -direction * speed_pct, direction * speed_pct);
+    set_drive_power(hardware, direction * speed_pct, -direction * speed_pct);
     vex::this_thread::sleep_for(kAutonomousLoopDelayMs);
   }
 
@@ -195,7 +195,7 @@ void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& c
   state.chassis.stop_brake_type = vex::hold;
 
   drive_distance_mm(hardware, competition, 600.0);
-  turn_deg(hardware, competition, 90.0);
+  turn_deg(hardware, competition, -90.0);
   drive_distance_mm(hardware, competition, 467.0);
   drive_distance_mm(hardware, competition, -1027.0);
 
