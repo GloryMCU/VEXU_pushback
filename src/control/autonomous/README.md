@@ -69,11 +69,12 @@ namespace basic::hardware::robots::autonomous
 7. 自动开始时只建立一次全局 IMU 参考，维护一份共享的目标航向。
 8. 直线段不再把“当前起始角”当作局部目标，而是直接跟踪这份全局目标航向。
 9. 用当前航向和目标航向的误差乘以保直比例系数，生成左右轮差速修正，让车沿着全局目标方向走直线。
-10. 当航向偏差很小的时候，不做修正，避免 IMU 微小抖动导致电机来回波动。
-11. 速度限制在最小值和最大值之间，保证：
+10. 保直修正的上限会跟当前直线速度联动，低速时自动收紧，避免动作切换时修正过猛。
+11. 当航向偏差很小的时候，不做修正，避免 IMU 微小抖动导致电机来回波动。
+12. 速度限制在最小值和最大值之间，保证：
    - 距离远时不会太快
    - 临近目标时还能继续推进，不会太早停住
-12. 到达容差后停车，并用 `hold` 刹车保持，同时更新简化的全局位姿估计。
+13. 到达容差后停车，并用 `hold` 刹车保持，同时更新简化的全局位姿估计。
 
 为什么取 8 个电机的平均值：
 
@@ -136,10 +137,12 @@ namespace basic::hardware::robots::autonomous
   - 直线最小速度
 - `kDriveMaxSpeedPct = 22.5`
   - 直线最大速度
-- `kDriveHeadingProportionalGain = 1.0`
+- `kDriveHeadingProportionalGain = 0.6`
   - 直线保直比例系数
-- `kDriveHeadingCorrectionMaxPct = 6.0`
+- `kDriveHeadingCorrectionMaxPct = 4.0`
   - 直线保直允许施加的最大左右差速修正
+- `kDriveHeadingCorrectionSpeedRatio = 0.2`
+  - 直线保直相对当前前进速度的修正上限比例
 - `kDriveHeadingDeadbandDegrees = 1.0`
   - 直线保直的角度死区，小偏差时不纠偏
 - `kTurnProportionalGain = 0.6`
@@ -172,10 +175,12 @@ namespace basic::hardware::robots::autonomous
 - 直线容易跑偏
   - 先增大 `kDriveHeadingProportionalGain`
   - 再增大 `kDriveHeadingCorrectionMaxPct`
+  - 还可以增大 `kDriveHeadingCorrectionSpeedRatio`
 
 - 直线纠偏过猛，出现左右摆
   - 先减小 `kDriveHeadingProportionalGain`
   - 再减小 `kDriveHeadingCorrectionMaxPct`
+  - 还可以减小 `kDriveHeadingCorrectionSpeedRatio`
 
 - 直线电机有明显来回抽动
   - 先增大 `kDriveHeadingDeadbandDegrees`
