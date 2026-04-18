@@ -2,6 +2,8 @@
 
 #include "control/motor_control.h"
 
+#include "control/mechanisms.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -319,6 +321,43 @@ void turn_deg(
   stop_drive(hardware, vex::hold);
   settle_after_motion();
 }
+
+void update_upper_overhang_mode(RobotHardware& hardware, RobotState& state){
+  OverhangMode& overhang_mode=state.overhang.upper_overhang_mode;
+  if(overhang_mode == OverhangMode::Expansion){
+    overhang_mode=OverhangMode::Collapse;
+    hardware.upper_overhang_motor.spinFor(1350,vex::deg,50,vex::velocityUnits::pct);
+  }else{
+    overhang_mode=OverhangMode::Expansion;
+    hardware.upper_overhang_motor.spinFor(-1350,vex::deg,50,vex::velocityUnits::pct);
+  }
+  hardware.upper_overhang_motor.stop(vex::hold);
+}
+
+void update_middle_overhang_mode(RobotHardware& hardware, RobotState& state){
+  OverhangMode& overhang_mode=state.overhang.middle_overhang_mode;
+  if(overhang_mode == OverhangMode::Expansion){
+    overhang_mode=OverhangMode::Collapse;
+    hardware.middle_overhang_motor.spinFor(-550,vex::deg,30,vex::velocityUnits::pct);
+  }else{
+    overhang_mode=OverhangMode::Expansion;
+    hardware.middle_overhang_motor.spinFor(550,vex::deg,30,vex::velocityUnits::pct);
+  }
+  hardware.middle_overhang_motor.stop(vex::hold);
+}
+
+void update_under_overhang_mode(RobotHardware& hardware, RobotState& state){
+  OverhangMode& overhang_mode=state.overhang.under_overhang_mode;
+  if(overhang_mode == OverhangMode::Expansion){
+    overhang_mode=OverhangMode::Collapse;
+    hardware.under_overhang_motor.spinFor(-750,vex::deg,30,vex::velocityUnits::pct);
+  }else{
+    overhang_mode=OverhangMode::Expansion;
+    hardware.under_overhang_motor.spinFor(750,vex::deg,30,vex::velocityUnits::pct);
+  }
+  hardware.under_overhang_motor.stop(vex::hold);
+}
+
 
 }  // namespace
 

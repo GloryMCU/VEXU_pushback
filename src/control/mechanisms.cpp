@@ -63,13 +63,13 @@ void apply_indexed_mode(RobotHardware& hardware, const MechanismState& mechanism
 }
 
 void update_under_overhang(RobotHardware& hardware, const ControllerInputState& input) {
-  if (input.up) {
+  if (input.x) {
     velocitycontrol(hardware.under_overhang_motor, -20, vex::pct);
   }
-  if (input.down) {
+  if (input.b) {
     velocitycontrol(hardware.under_overhang_motor, 20, vex::pct);
   }
-  if (!input.up && !input.down) {
+  if (!input.x && !input.b) {
     stopcontrol(hardware.under_overhang_motor, vex::hold);
   }
 }
@@ -87,14 +87,14 @@ void update_middle_overhang(RobotHardware& hardware, const ControllerInputState&
 }
 
 void update_upper_overhang(RobotHardware& hardware, const ControllerInputState& input) {
-  if (input.x) {
-    velocitycontrol(hardware.up_overhang_motor, 50, vex::pct);
+  if (input.up) {
+    velocitycontrol(hardware.upper_overhang_motor, -50, vex::pct);
   }
-  if (input.b) {
-    velocitycontrol(hardware.up_overhang_motor, -50, vex::pct);
+  if (input.down) {
+    velocitycontrol(hardware.upper_overhang_motor, 50, vex::pct);
   }
-  if (!input.x && !input.b) {
-    stopcontrol(hardware.up_overhang_motor, vex::hold);
+  if (!input.up && !input.down) {
+    stopcontrol(hardware.upper_overhang_motor, vex::hold);
   }
 }
 
@@ -111,6 +111,9 @@ void mechanism_update(RobotHardware& hardware, RobotState& state) {
   if (input.press_a) {
     toggle_indexed_mode(mechanism, IndexedMechanismMode::kLegacyIntake);
   }
+  if(input.press_l2){
+    toggle_indexed_mode(mechanism, IndexedMechanismMode::kUnderTrow);
+  }
   if (input.press_l1) {
     toggle_indexed_mode(mechanism, IndexedMechanismMode::kMiddleThrow);
   }
@@ -118,6 +121,30 @@ void mechanism_update(RobotHardware& hardware, RobotState& state) {
     toggle_indexed_mode(mechanism, IndexedMechanismMode::kUpperThrow);
   }
 
+  apply_indexed_mode(hardware, mechanism);
+}
+
+void update_intake_mode(RobotHardware& hardware, RobotState& state){
+  MechanismState& mechanism = state.mechanism;
+  toggle_indexed_mode(mechanism, IndexedMechanismMode::kLegacyIntake);
+  apply_indexed_mode(hardware, mechanism);
+}
+
+void update_underthrow_mode(RobotHardware& hardware, RobotState& state){
+  MechanismState& mechanism = state.mechanism;
+  toggle_indexed_mode(mechanism, IndexedMechanismMode::kUnderTrow);
+  apply_indexed_mode(hardware, mechanism);
+}
+
+void update_middlethrow_mode(RobotHardware& hardware, RobotState& state){
+  MechanismState& mechanism = state.mechanism;
+  toggle_indexed_mode(mechanism, IndexedMechanismMode::kMiddleThrow);
+  apply_indexed_mode(hardware, mechanism);
+}
+
+void update_upperthrow_mode(RobotHardware& hardware, RobotState& state){
+  MechanismState& mechanism = state.mechanism;
+  toggle_indexed_mode(mechanism, IndexedMechanismMode::kUpperThrow);
   apply_indexed_mode(hardware, mechanism);
 }
 

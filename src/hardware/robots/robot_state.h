@@ -13,6 +13,11 @@ enum class IndexedMechanismMode {
   kUpperThrow,
 };
 
+enum class OverhangMode{
+  Collapse,
+  Expansion,
+};
+
 struct ControllerInputState {
   int time_ms{0};
 
@@ -89,6 +94,12 @@ struct MechanismState {
   IndexedMechanismMode indexed_mode{IndexedMechanismMode::kOff};
 };
 
+struct OverhangState {
+  OverhangMode upper_overhang_mode{OverhangMode::Collapse};
+  OverhangMode middle_overhang_mode{OverhangMode::Collapse};
+  OverhangMode under_overhang_mode{OverhangMode::Collapse};
+};
+
 struct AutonomousState {
   bool initialized{false};
   double target_heading_deg{0.0};
@@ -102,6 +113,7 @@ struct RobotState {
   SensorState sensors;
   ChassisState chassis;
   MechanismState mechanism;
+  OverhangState overhang;
   AutonomousState autonomous;
 };
 
