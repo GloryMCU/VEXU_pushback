@@ -103,7 +103,7 @@ src/
   - 读取 `RobotState` 中的输入与传感器值，计算并下发底盘输出。
 
 - `src/control/mechanisms.h`
-  - 声明机构控制模块的私有入口。
+  - 声明机构控制模块的私有入口，对外封装4种机构动作的控制接口
 
 - `src/control/mechanisms.cpp`
   - 读取 `RobotState` 中的输入值，更新机构动作。

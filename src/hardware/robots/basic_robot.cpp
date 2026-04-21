@@ -89,7 +89,7 @@ class BasicRobot final : public basic::app::Robot {
 
     robots::stopcontrol(hardware_.under_overhang_motor, vex::hold);
     robots::stopcontrol(hardware_.middle_overhang_motor, vex::hold);
-    robots::stopcontrol(hardware_.up_overhang_motor, vex::hold);
+    robots::stopcontrol(hardware_.upper_overhang_motor, vex::hold);
   }
 
   robots::RobotHardware hardware_;
