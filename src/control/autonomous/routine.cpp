@@ -15,6 +15,7 @@ constexpr double kPi = 3.14159265358979323846;
 constexpr int kAutonomousLoopDelayMs = 10;
 constexpr int kAutonomousSettleDelayMs = 150;
 constexpr double kDriveToleranceRevolutions = 0.03;
+constexpr double kDriveToleranceMm = kDriveToleranceRevolutions * kMillimetersPerWheelRevolution;
 constexpr double kTurnToleranceDegrees = 1.5;
 constexpr double kDriveMinSpeedPct = 12.0;
 constexpr double kDriveMaxSpeedPct = 22.5;
@@ -42,6 +43,12 @@ constexpr int kTurnTimeoutPerDegreeMs = 50;
 using DriveMotorArray = std::array<vex::motor*, 8>;
 using DriveSample = std::array<double, 8>;
 using SideMotorArray = std::array<vex::motor*, 4>;
+
+struct PoseMeasurement {
+  double x_mm{0.0};
+  double y_mm{0.0};
+  double heading_deg{0.0};
+};
 
 DriveMotorArray drive_motors(RobotHardware& hardware) {
   return {{
@@ -173,14 +180,59 @@ double normalize_angle_deg(double angle_deg) {
   return angle_deg;
 }
 
-double current_heading_deg(RobotHardware& hardware) {
-  return normalize_angle_deg(hardware.inertial.rotation(vex::deg));
+bool try_read_gps_pose(RobotHardware& hardware, PoseMeasurement& pose) {
+  if (!hardware.gps_sensor.installed() || hardware.gps_sensor.isCalibrating()) {
+    return false;
+  }
+
+  pose.x_mm = hardware.gps_sensor.xPosition(vex::distanceUnits::mm);
+  pose.y_mm = hardware.gps_sensor.yPosition(vex::distanceUnits::mm);
+  pose.heading_deg = normalize_angle_deg(hardware.gps_sensor.heading(vex::deg));
+  return std::isfinite(pose.x_mm) &&
+         std::isfinite(pose.y_mm) &&
+         std::isfinite(pose.heading_deg);
+}
+
+void set_autonomous_pose_from_gps(RobotState& state, const PoseMeasurement& pose) {
+  state.autonomous.using_gps_observer = true;
+  state.autonomous.estimated_x_mm = pose.x_mm - state.autonomous.observer_origin_x_mm;
+  state.autonomous.estimated_y_mm = pose.y_mm - state.autonomous.observer_origin_y_mm;
+  state.autonomous.estimated_heading_deg = pose.heading_deg;
+}
+
+bool sync_autonomous_pose_from_gps(RobotHardware& hardware, RobotState& state) {
+  PoseMeasurement pose{};
+  if (!try_read_gps_pose(hardware, pose)) {
+    state.autonomous.using_gps_observer = false;
+    return false;
+  }
+
+  set_autonomous_pose_from_gps(state, pose);
+  return true;
+}
+
+double current_heading_deg(RobotHardware& hardware, RobotState& state) {
+  if (sync_autonomous_pose_from_gps(hardware, state)) {
+    return state.autonomous.estimated_heading_deg;
+  }
+
+  const double heading_deg = normalize_angle_deg(hardware.inertial.rotation(vex::deg));
+  state.autonomous.estimated_heading_deg = heading_deg;
+  return heading_deg;
 }
 
 void reset_autonomous_frame(RobotHardware& hardware, RobotState& state) {
   hardware.inertial.resetRotation();
   state.autonomous = AutonomousState{};
   state.autonomous.initialized = true;
+
+  PoseMeasurement gps_pose{};
+  if (try_read_gps_pose(hardware, gps_pose)) {
+    state.autonomous.observer_origin_x_mm = gps_pose.x_mm;
+    state.autonomous.observer_origin_y_mm = gps_pose.y_mm;
+    set_autonomous_pose_from_gps(state, gps_pose);
+    state.autonomous.target_heading_deg = gps_pose.heading_deg;
+  }
 }
 
 void ensure_autonomous_frame(RobotHardware& hardware, RobotState& state) {
@@ -193,6 +245,11 @@ void update_autonomous_pose(RobotState& state, double delta_mm, double heading_d
   state.autonomous.estimated_heading_deg = heading_deg;
   state.autonomous.estimated_x_mm += delta_mm * std::cos(deg_to_rad(heading_deg));
   state.autonomous.estimated_y_mm += delta_mm * std::sin(deg_to_rad(heading_deg));
+}
+
+double projected_distance_on_heading_mm(double delta_x_mm, double delta_y_mm, double heading_deg) {
+  return delta_x_mm * std::cos(deg_to_rad(heading_deg)) +
+         delta_y_mm * std::sin(deg_to_rad(heading_deg));
 }
 
 double turn_timeout_ms(double target_degrees) {
@@ -236,29 +293,43 @@ void drive_distance_mm(
 
   ensure_autonomous_frame(hardware, state);
   const double direction = distance_mm > 0.0 ? 1.0 : -1.0;
-  const double target_revolutions = std::fabs(distance_mm) / kMillimetersPerWheelRevolution;
+  const double target_distance_mm = std::fabs(distance_mm);
   const DriveSample start_sample = sample_drive_revolutions(hardware);
-  double previous_traveled_revolutions = 0.0;
+  double previous_encoder_revolutions = 0.0;
+  PoseMeasurement start_pose{};
+  const bool use_gps_progress = try_read_gps_pose(hardware, start_pose);
+  if (use_gps_progress) {
+    set_autonomous_pose_from_gps(state, start_pose);
+  }
 
   while (should_run_autonomous(competition)) {
-    const double traveled_revolutions = average_drive_delta_revolutions(hardware, start_sample);
-    const double current_heading_degrees = current_heading_deg(hardware);
-    const double traveled_delta_revolutions = traveled_revolutions - previous_traveled_revolutions;
-    if (traveled_delta_revolutions > 0.0) {
+    const double encoder_revolutions = average_drive_delta_revolutions(hardware, start_sample);
+    const double encoder_delta_revolutions = encoder_revolutions - previous_encoder_revolutions;
+    const double current_heading_degrees = current_heading_deg(hardware, state);
+    double traveled_mm = encoder_revolutions * kMillimetersPerWheelRevolution;
+
+    PoseMeasurement current_pose{};
+    if (use_gps_progress && try_read_gps_pose(hardware, current_pose)) {
+      set_autonomous_pose_from_gps(state, current_pose);
+      traveled_mm = std::max(
+          0.0,
+          direction * projected_distance_on_heading_mm(
+                          current_pose.x_mm - start_pose.x_mm,
+                          current_pose.y_mm - start_pose.y_mm,
+                          state.autonomous.target_heading_deg));
+    } else if (encoder_delta_revolutions > 0.0) {
       update_autonomous_pose(
           state,
-          direction * traveled_delta_revolutions * kMillimetersPerWheelRevolution,
+          direction * encoder_delta_revolutions * kMillimetersPerWheelRevolution,
           current_heading_degrees);
-      previous_traveled_revolutions = traveled_revolutions;
     }
+    previous_encoder_revolutions = encoder_revolutions;
 
-    const double remaining_revolutions = target_revolutions - traveled_revolutions;
-    if (remaining_revolutions <= kDriveToleranceRevolutions) {
+    const double remaining_mm = target_distance_mm - traveled_mm;
+    if (remaining_mm <= kDriveToleranceMm) {
       break;
     }
 
-    const double traveled_mm = traveled_revolutions * kMillimetersPerWheelRevolution;
-    const double remaining_mm = remaining_revolutions * kMillimetersPerWheelRevolution;
     const double speed_pct = planned_linear_speed_pct(
         traveled_mm,
         remaining_mm,
@@ -302,8 +373,7 @@ void turn_deg(
       break;
     }
 
-    const double current_heading_degrees = current_heading_deg(hardware);
-    state.autonomous.estimated_heading_deg = current_heading_degrees;
+    const double current_heading_degrees = current_heading_deg(hardware, state);
     const double error_degrees = normalize_angle_deg(
         state.autonomous.target_heading_deg - current_heading_degrees);
     if (std::fabs(error_degrees) <= kTurnToleranceDegrees) {
@@ -340,7 +410,12 @@ void drive_to_laser_distance_mm(
   }
 
   const DriveSample start_sample = sample_drive_revolutions(hardware);
-  double previous_traveled_revolutions = 0.0;
+  double previous_encoder_revolutions = 0.0;
+  PoseMeasurement start_pose{};
+  const bool use_gps_pose = try_read_gps_pose(hardware, start_pose);
+  if (use_gps_pose) {
+    set_autonomous_pose_from_gps(state, start_pose);
+  }
   const int motion_start_ms = hardware.brain.timer(vex::msec);
   const double initial_distance_error_mm = std::fabs(measured_distance_mm - target_distance_mm);
   const double timeout_ms = laser_distance_timeout_ms(measured_distance_mm - target_distance_mm);
@@ -355,17 +430,20 @@ void drive_to_laser_distance_mm(
       break;
     }
 
-    const double current_heading_degrees = current_heading_deg(hardware);
-    const double traveled_revolutions = average_drive_delta_revolutions(hardware, start_sample);
-    const double traveled_delta_revolutions = traveled_revolutions - previous_traveled_revolutions;
-    if (traveled_delta_revolutions > 0.0) {
+    const double current_heading_degrees = current_heading_deg(hardware, state);
+    const double encoder_revolutions = average_drive_delta_revolutions(hardware, start_sample);
+    const double encoder_delta_revolutions = encoder_revolutions - previous_encoder_revolutions;
+    PoseMeasurement current_pose{};
+    if (use_gps_pose && try_read_gps_pose(hardware, current_pose)) {
+      set_autonomous_pose_from_gps(state, current_pose);
+    } else if (encoder_delta_revolutions > 0.0) {
       const double drive_direction = measured_distance_mm > target_distance_mm ? 1.0 : -1.0;
       update_autonomous_pose(
           state,
-          drive_direction * traveled_delta_revolutions * kMillimetersPerWheelRevolution,
+          drive_direction * encoder_delta_revolutions * kMillimetersPerWheelRevolution,
           current_heading_degrees);
-      previous_traveled_revolutions = traveled_revolutions;
     }
+    previous_encoder_revolutions = encoder_revolutions;
 
     const double distance_error_mm = measured_distance_mm - target_distance_mm;
     if (std::fabs(distance_error_mm) <= kLaserDistanceToleranceMm) {

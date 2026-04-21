@@ -9,6 +9,10 @@ inline constexpr bool kIsBlue = false;
 inline constexpr int kRefreshTime = 10;
 inline constexpr int kDeadZone = 10;
 inline constexpr int kSensorLoopDelay = 50;
+inline constexpr int kGpsPort = 21;
+inline constexpr double kGpsOffsetXMm = 0.0;
+inline constexpr double kGpsOffsetYMm = 0.0;
+inline constexpr double kGpsHeadingOffsetDeg = 0.0;
 
 struct RobotHardware {
   vex::motor motor_fr1{vex::PORT9, vex::ratio6_1, true};
@@ -42,10 +46,21 @@ struct RobotHardware {
   vex::brain brain;
   vex::controller controller{vex::controllerType::primary};
   vex::inertial inertial{vex::PORT11};
+  vex::gps gps_sensor{
+      kGpsPort,
+      kGpsOffsetXMm,
+      kGpsOffsetYMm,
+      vex::distanceUnits::mm,
+      kGpsHeadingOffsetDeg};
 
   void calibrate_inertial_sensor() {
     inertial.calibrate();
-    while (inertial.isCalibrating()) {
+    const bool gps_installed = gps_sensor.installed();
+    if (gps_installed) {
+      gps_sensor.calibrate();
+    }
+
+    while (inertial.isCalibrating() || (gps_installed && gps_sensor.isCalibrating())) {
       vex::wait(5, vex::msec);
     }
 

@@ -91,10 +91,13 @@ struct MechanismState {
 
 struct AutonomousState {
   bool initialized{false};
+  bool using_gps_observer{false};
   double target_heading_deg{0.0};
   double estimated_heading_deg{0.0};
   double estimated_x_mm{0.0};
   double estimated_y_mm{0.0};
+  double observer_origin_x_mm{0.0};
+  double observer_origin_y_mm{0.0};
 };
 
 struct RobotState {
