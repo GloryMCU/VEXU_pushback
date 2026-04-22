@@ -60,7 +60,7 @@ struct RobotHardware {
       gps_sensor.calibrate();
     }
 
-    while (inertial.isCalibrating() && (gps_installed && gps_sensor.isCalibrating())) {
+    while (inertial.isCalibrating() || (gps_installed && gps_sensor.isCalibrating())) {
       vex::wait(5, vex::msec);
     }
 

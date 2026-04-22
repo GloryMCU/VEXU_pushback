@@ -184,8 +184,16 @@ double lerp(double start_value, double end_value, double alpha) {
   return start_value + (end_value - start_value) * clamp_unit_interval(alpha);
 }
 
+double heading_x_component(double heading_deg) {
+  return std::sin(deg_to_rad(heading_deg));
+}
+
+double heading_y_component(double heading_deg) {
+  return std::cos(deg_to_rad(heading_deg));
+}
+
 double heading_from_vector_deg(double x_mm, double y_mm) {
-  return normalize_angle_deg(rad_to_deg(std::atan2(y_mm, x_mm)));
+  return normalize_angle_deg(rad_to_deg(std::atan2(x_mm, y_mm)));
 }
 
 double average_revolutions(const SideMotorArray& motors) {
@@ -296,8 +304,8 @@ double update_autonomous_pose_estimate(
 
   if (std::fabs(delta_mm) > 1e-6) {
     const double travel_heading_deg = blend_angle_deg(previous_heading_deg, current_heading_deg, 0.5);
-    state.autonomous.estimated_x_mm += delta_mm * std::cos(deg_to_rad(travel_heading_deg));
-    state.autonomous.estimated_y_mm += delta_mm * std::sin(deg_to_rad(travel_heading_deg));
+    state.autonomous.estimated_x_mm += delta_mm * heading_x_component(travel_heading_deg);
+    state.autonomous.estimated_y_mm += delta_mm * heading_y_component(travel_heading_deg);
   }
   state.autonomous.estimated_heading_deg = current_heading_deg;
 
@@ -416,9 +424,9 @@ void drive_distance_mm(
 
   const double travel_heading_deg = state.autonomous.target_heading_deg;
   const double target_x_mm =
-      state.autonomous.estimated_x_mm + distance_mm * std::cos(deg_to_rad(travel_heading_deg));
+      state.autonomous.estimated_x_mm + distance_mm * heading_x_component(travel_heading_deg);
   const double target_y_mm =
-      state.autonomous.estimated_y_mm + distance_mm * std::sin(deg_to_rad(travel_heading_deg));
+      state.autonomous.estimated_y_mm + distance_mm * heading_y_component(travel_heading_deg);
   const TravelDirection travel_direction =
       distance_mm >= 0.0 ? TravelDirection::kForward : TravelDirection::kReverse;
   go_to_pose(
