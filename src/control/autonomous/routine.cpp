@@ -456,10 +456,10 @@ void update_upper_overhang_mode(RobotHardware& hardware, RobotState& state) {
   OverhangMode& overhang_mode = state.overhang.upper_overhang_mode;
   if (overhang_mode == OverhangMode::Expansion) {
     overhang_mode = OverhangMode::Collapse;
-    hardware.upper_overhang_motor.spinFor(1350, vex::deg, 50, vex::velocityUnits::pct);
+    hardware.upper_overhang_motor.spinFor(1450, vex::deg, 50, vex::velocityUnits::pct);
   } else {
     overhang_mode = OverhangMode::Expansion;
-    hardware.upper_overhang_motor.spinFor(-1350, vex::deg, 50, vex::velocityUnits::pct);
+    hardware.upper_overhang_motor.spinFor(-1450, vex::deg, 50, vex::velocityUnits::pct);
   }
   hardware.upper_overhang_motor.stop(vex::hold);
 }
@@ -638,6 +638,9 @@ void go_to_pose(
         hardware,
         linear_speed_pct + 0.5 * turn_command_pct,
         linear_speed_pct - 0.5 * turn_command_pct);
+
+    hardware.show_gps_pose();
+
     vex::this_thread::sleep_for(kAutonomousLoopDelayMs);
   }
 
@@ -715,14 +718,23 @@ void drive_to_laser_distance_mm(
 void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& competition) {
   state.chassis.stop_brake_type = vex::hold;
   reset_autonomous_frame(hardware, state);
+  //hardware.calibrate_inertial_sensor();
+  //hardware.show_calibrated();
 
+  //update_under_overhang_mode(hardware,state);
+  //update_middle_overhang_mode(hardware,state);
+  //update_upper_overhang_mode(hardware,state);
+  
   drive_distance_mm(hardware, state, competition, 710.0);
   turn_deg(hardware, state, competition, -90.0);
+  hardware.show_gps_pose();
   drive_distance_mm(hardware, state, competition, 377.0);
   drive_distance_mm(hardware, state, competition, -320.0);
   turn_deg(hardware, state, competition, 180.0);
+  hardware.show_gps_pose();
+  update_under_overhang_mode(hardware,state);
   drive_distance_mm(hardware, state, competition, 492.0);
-
+  hardware.show_gps_pose();
   stop_drive(hardware, vex::hold);
 }
 

@@ -71,6 +71,8 @@ void chassis_update(RobotHardware& hardware, RobotState& state) {
   apply_motor_power(hardware.motor_fl2, chassis.fl, chassis.stop_brake_type);
   apply_motor_power(hardware.motor_fr1, chassis.fr, chassis.stop_brake_type);
   apply_motor_power(hardware.motor_fr2, chassis.fr, chassis.stop_brake_type);
+
+  hardware.show_gps_pose();
 }
 
 }  // namespace basic::hardware::robots
