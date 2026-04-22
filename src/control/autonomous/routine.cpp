@@ -247,9 +247,9 @@ bool try_read_gps_pose(RobotHardware& hardware, PoseMeasurement& pose) {
          std::isfinite(pose.heading_deg);
 }
 
-double absolute_inertial_heading_deg(RobotHardware& hardware, const RobotState& state) {
+double local_inertial_heading_deg(RobotHardware& hardware, const RobotState& state) {
   return normalize_angle_deg(
-      state.autonomous.observer_origin_heading_deg + hardware.inertial.rotation(vex::deg));
+      state.autonomous.imu_heading_offset_deg + hardware.inertial.rotation(vex::deg));
 }
 
 void initialize_gps_origin(
@@ -261,7 +261,9 @@ void initialize_gps_origin(
   state.autonomous.observer_origin_y_mm =
       absolute_gps_pose.y_mm - state.autonomous.estimated_y_mm;
   state.autonomous.observer_origin_heading_deg = normalize_angle_deg(
-      absolute_gps_pose.heading_deg - hardware.inertial.rotation(vex::deg));
+      absolute_gps_pose.heading_deg - state.autonomous.estimated_heading_deg);
+  state.autonomous.imu_heading_offset_deg = normalize_angle_deg(
+      state.autonomous.estimated_heading_deg - hardware.inertial.rotation(vex::deg));
   state.autonomous.gps_origin_initialized = true;
 }
 
@@ -281,7 +283,8 @@ bool try_read_local_gps_pose(
 
   local_pose.x_mm = absolute_pose.x_mm - state.autonomous.observer_origin_x_mm;
   local_pose.y_mm = absolute_pose.y_mm - state.autonomous.observer_origin_y_mm;
-  local_pose.heading_deg = absolute_pose.heading_deg;
+  local_pose.heading_deg = normalize_angle_deg(
+      absolute_pose.heading_deg - state.autonomous.observer_origin_heading_deg);
   state.autonomous.using_gps_observer = true;
   return true;
 }
@@ -298,7 +301,7 @@ double update_autonomous_pose_estimate(
     DriveSideRevolutions& previous_drive_sample) {
   const DriveSideRevolutions current_drive_sample = sample_drive_side_revolutions(hardware);
   const double previous_heading_deg = state.autonomous.estimated_heading_deg;
-  const double current_heading_deg = absolute_inertial_heading_deg(hardware, state);
+  const double current_heading_deg = local_inertial_heading_deg(hardware, state);
   const double delta_mm = center_delta_mm(previous_drive_sample, current_drive_sample);
   previous_drive_sample = current_drive_sample;
 
@@ -319,9 +322,9 @@ double update_autonomous_pose_estimate(
     const double heading_error_deg =
         normalize_angle_deg(local_gps_pose.heading_deg - state.autonomous.estimated_heading_deg);
     if (std::fabs(heading_error_deg) <= kGpsHeadingCorrectionMaxDegrees) {
-      state.autonomous.observer_origin_heading_deg = normalize_angle_deg(
-          state.autonomous.observer_origin_heading_deg + heading_error_deg * kGpsHeadingBlend);
-      state.autonomous.estimated_heading_deg = absolute_inertial_heading_deg(hardware, state);
+      state.autonomous.imu_heading_offset_deg = normalize_angle_deg(
+          state.autonomous.imu_heading_offset_deg + heading_error_deg * kGpsHeadingBlend);
+      state.autonomous.estimated_heading_deg = local_inertial_heading_deg(hardware, state);
     }
   }
 
@@ -344,10 +347,11 @@ void reset_autonomous_frame(RobotHardware& hardware, RobotState& state) {
     PoseMeasurement local_pose{};
     local_pose.x_mm = gps_pose.x_mm - state.autonomous.observer_origin_x_mm;
     local_pose.y_mm = gps_pose.y_mm - state.autonomous.observer_origin_y_mm;
-    local_pose.heading_deg = gps_pose.heading_deg;
+    local_pose.heading_deg = normalize_angle_deg(
+        gps_pose.heading_deg - state.autonomous.observer_origin_heading_deg);
     set_autonomous_pose_from_measurement(state, local_pose);
     state.autonomous.using_gps_observer = true;
-    state.autonomous.target_heading_deg = gps_pose.heading_deg;
+    state.autonomous.target_heading_deg = local_pose.heading_deg;
     return;
   }
 
