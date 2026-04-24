@@ -43,6 +43,10 @@ constexpr double kTurnApproachWindowDegrees = 12.0;
 constexpr double kGpsPositionBlend = 0.2;
 constexpr double kGpsHeadingBlend = 0.08;
 constexpr double kGpsHeadingCorrectionMaxDegrees = 25.0;
+constexpr double kGpsPositionMinimumQuality = 90.0;
+constexpr double kGpsPositionKalmanProcessNoise = 400.0;
+constexpr double kGpsPositionKalmanMeasurementNoise = 900.0;
+constexpr double kGpsPositionKalmanInitialCovariance = 900.0;
 
 constexpr double kGoToPosePositionToleranceMm = 30.0;
 constexpr double kGoToPoseHeadingToleranceDegrees = 3.0;
@@ -107,6 +111,20 @@ SideMotorArray right_drive_motors(RobotHardware& hardware) {
 
 bool should_run_autonomous(vex::competition& competition) {
   return competition.isEnabled() && competition.isAutonomous();
+}
+
+void configure_gps_position_filters(RobotState& state) {
+  state.autonomous.gps_x_filter.set_process_noise(kGpsPositionKalmanProcessNoise);
+  state.autonomous.gps_x_filter.set_measurement_noise(kGpsPositionKalmanMeasurementNoise);
+  state.autonomous.gps_x_filter.set_initial_covariance(kGpsPositionKalmanInitialCovariance);
+  state.autonomous.gps_x_filter.reset();
+
+  state.autonomous.gps_y_filter.set_process_noise(kGpsPositionKalmanProcessNoise);
+  state.autonomous.gps_y_filter.set_measurement_noise(kGpsPositionKalmanMeasurementNoise);
+  state.autonomous.gps_y_filter.set_initial_covariance(kGpsPositionKalmanInitialCovariance);
+  state.autonomous.gps_y_filter.reset();
+
+  state.autonomous.gps_position_filter_initialized = false;
 }
 
 double clamp_value(double value, double min_value, double max_value) {
@@ -234,17 +252,35 @@ void stop_drive(RobotHardware& hardware, vex::brakeType brake_type) {
   }
 }
 
-bool try_read_gps_pose(RobotHardware& hardware, PoseMeasurement& pose) {
+bool try_read_gps_pose(RobotHardware& hardware, RobotState& state, PoseMeasurement& pose) {
   if (!hardware.gps_sensor.installed() || hardware.gps_sensor.isCalibrating()) {
+    return false;
+  }
+
+  const double quality = hardware.gps_sensor.quality();
+  if (!std::isfinite(quality) || quality <= kGpsPositionMinimumQuality) {
     return false;
   }
 
   pose.x_mm = hardware.gps_sensor.xPosition(vex::distanceUnits::mm);
   pose.y_mm = hardware.gps_sensor.yPosition(vex::distanceUnits::mm);
   pose.heading_deg = normalize_angle_deg(hardware.gps_sensor.heading(vex::deg));
-  return std::isfinite(pose.x_mm) &&
-         std::isfinite(pose.y_mm) &&
-         std::isfinite(pose.heading_deg);
+  if (!std::isfinite(pose.x_mm) ||
+      !std::isfinite(pose.y_mm) ||
+      !std::isfinite(pose.heading_deg)) {
+    return false;
+  }
+
+  if (!state.autonomous.gps_position_filter_initialized) {
+    state.autonomous.gps_x_filter.reset(pose.x_mm, kGpsPositionKalmanInitialCovariance);
+    state.autonomous.gps_y_filter.reset(pose.y_mm, kGpsPositionKalmanInitialCovariance);
+    state.autonomous.gps_position_filter_initialized = true;
+  } else {
+    pose.x_mm = state.autonomous.gps_x_filter.update(pose.x_mm);
+    pose.y_mm = state.autonomous.gps_y_filter.update(pose.y_mm);
+  }
+
+  return std::isfinite(pose.x_mm) && std::isfinite(pose.y_mm);
 }
 
 double local_inertial_heading_deg(RobotHardware& hardware, const RobotState& state) {
@@ -272,8 +308,9 @@ bool try_read_local_gps_pose(
     RobotState& state,
     PoseMeasurement& local_pose) {
   PoseMeasurement absolute_pose{};
-  if (!try_read_gps_pose(hardware, absolute_pose)) {
+  if (!try_read_gps_pose(hardware, state, absolute_pose)) {
     state.autonomous.using_gps_observer = false;
+    state.autonomous.gps_position_filter_initialized = false;
     return false;
   }
 
@@ -340,9 +377,10 @@ void reset_autonomous_frame(RobotHardware& hardware, RobotState& state) {
   hardware.inertial.resetRotation();
   state.autonomous = AutonomousState{};
   state.autonomous.initialized = true;
+  configure_gps_position_filters(state);
 
   PoseMeasurement gps_pose{};
-  if (try_read_gps_pose(hardware, gps_pose)) {
+  if (try_read_gps_pose(hardware, state, gps_pose)) {
     initialize_gps_origin(hardware, state, gps_pose);
     PoseMeasurement local_pose{};
     local_pose.x_mm = gps_pose.x_mm - state.autonomous.observer_origin_x_mm;
