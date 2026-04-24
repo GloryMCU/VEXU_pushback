@@ -23,7 +23,9 @@ class BasicRobot final : public basic::app::Robot {
     hardware_.show_calibrated();
   }
 
-  void start_background_tasks() override {}
+  void bind_background_tasks() override {
+    vex::thread background(start_background_tasks);
+  }
 
   void bind_competition(vex::competition& competition) override {
     competition_ = &competition;
@@ -32,12 +34,27 @@ class BasicRobot final : public basic::app::Robot {
   }
 
  private:
+  static void start_background_tasks(){
+    current_basic_robot().run_background_tasks();
+  }
+
   static void start_driver_control_entry() {
     current_basic_robot().run_driver_control_loop();
   }
 
   static void start_autonomous_entry() {
     current_basic_robot().run_autonomous_routine();
+  }
+
+  void run_background_tasks(){
+    printf("x_mm,y_mm,heading_deg\n");
+    while(true){
+      double x_mm=hardware_.gps_sensor.xPosition();
+      double y_mm=hardware_.gps_sensor.yPosition();
+      double heading_deg=hardware_.gps_sensor.heading();
+      printf("%.2f,%.2f,%.2f\n",x_mm,y_mm,heading_deg);
+      vex::this_thread::sleep_for(10);
+    }
   }
 
   void run_driver_control_loop() {

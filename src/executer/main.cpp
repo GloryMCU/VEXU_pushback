@@ -11,7 +11,7 @@
 int main() {
   basic::app::Robot& robot = basic::hardware::get_current_robot();
   robot.initialize();
-  robot.start_background_tasks();
+  robot.bind_background_tasks();
 
 #ifdef COMPETITION
   static vex::competition competition;

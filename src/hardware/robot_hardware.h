@@ -41,7 +41,7 @@ struct RobotHardware {
   vex::motor middle_overhang_motor{vex::PORT17, vex::ratio6_1, true};
 
 
-  vex::motor serial_sensor{vex::PORT9, vex::ratio6_1, true};
+  vex::motor serial_sensor{vex::PORT4, vex::ratio6_1, true};
   vex::distance laser_rangefinder{vex::PORT4};
   vex::brain brain;
   vex::controller controller{vex::controllerType::primary};

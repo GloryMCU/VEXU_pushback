@@ -10,7 +10,7 @@ class Robot {
   virtual ~Robot() = default;
 
   virtual void initialize() = 0;
-  virtual void start_background_tasks() = 0;
+  virtual void bind_background_tasks() = 0;
   virtual void bind_competition(vex::competition& competition) = 0;
 };
 
