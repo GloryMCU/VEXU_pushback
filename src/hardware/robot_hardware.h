@@ -60,7 +60,7 @@ struct RobotHardware {
       gps_sensor.calibrate();
     }
 
-    while (inertial.isCalibrating() && (gps_installed && gps_sensor.isCalibrating())) {
+    while (inertial.isCalibrating() || (gps_installed && gps_sensor.isCalibrating())) {
       vex::wait(5, vex::msec);
     }
 
@@ -73,13 +73,13 @@ struct RobotHardware {
     controller.Screen.print("      calibrated!");
   }
 
-  void show_gps_pose(){
-    controller.Screen.setCursor(1,1);
-    double x_mm=gps_sensor.xPosition();
-    double y_mm=gps_sensor.yPosition();
-    double heading_deg=gps_sensor.heading();
+  void show_gps_pose() {
+    controller.Screen.setCursor(1, 1);
+    const double x_mm = gps_sensor.xPosition(vex::distanceUnits::mm);
+    const double y_mm = gps_sensor.yPosition(vex::distanceUnits::mm);
+    const double heading_deg = gps_sensor.heading(vex::deg);
 
-    controller.Screen.print("%.2f %.2f %.2f",x_mm,y_mm,heading_deg);
+    controller.Screen.print("%.2f %.2f %.2f", x_mm, y_mm, heading_deg);
   }
 
   void show_sensor_color(char color_code) {
