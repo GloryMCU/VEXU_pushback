@@ -8,6 +8,7 @@
 #include "hardware/sensors.h"
 #include "hardware/robots/robot_state.h"
 #include "input/controller.h"
+#include "control/kalman/calculator.hpp"
 
 namespace basic::hardware {
 
@@ -47,12 +48,16 @@ class BasicRobot final : public basic::app::Robot {
   }
 
   void run_background_tasks(){
-    printf("x_mm,y_mm,heading_deg\n");
+    printf("time_ms,x_mm,y_mm,heading_deg\n");
+    double start_time_ms=hardware_.brain.Timer.time(vex::msec);
     while(true){
       double x_mm=hardware_.gps_sensor.xPosition();
       double y_mm=hardware_.gps_sensor.yPosition();
       double heading_deg=hardware_.gps_sensor.heading();
-      printf("%.2f,%.2f,%.2f\n",x_mm,y_mm,heading_deg);
+      x_mm=state_.autonomous.gps_x_filter.update(x_mm);
+      y_mm=state_.autonomous.gps_y_filter.update(y_mm);
+      double time_ms=hardware_.brain.Timer.time(vex::msec)-start_time_ms;
+      printf("%.2f,%.2f,%.2f,%.2f\n",time_ms,x_mm,y_mm,heading_deg);
       vex::this_thread::sleep_for(10);
     }
   }
