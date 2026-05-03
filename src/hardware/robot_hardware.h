@@ -9,11 +9,6 @@ inline constexpr bool kIsBlue = false;
 inline constexpr int kRefreshTime = 10;
 inline constexpr int kDeadZone = 10;
 inline constexpr int kSensorLoopDelay = 50;
-inline constexpr int kGpsPort = 14;
-inline constexpr double kGpsOffsetXMm = 0.0;
-inline constexpr double kGpsOffsetYMm = 0.0;
-inline constexpr double kGpsHeadingOffsetDeg = 0.0;
-
 struct RobotHardware {
   vex::motor motor_fr1{vex::PORT9, vex::ratio6_1, true};
   vex::motor motor_fr2{vex::PORT8, vex::ratio6_1, false};
@@ -46,21 +41,10 @@ struct RobotHardware {
   vex::brain brain;
   vex::controller controller{vex::controllerType::primary};
   vex::inertial inertial{vex::PORT11};
-  vex::gps gps_sensor{
-      vex::PORT4,
-      kGpsOffsetXMm,
-      kGpsOffsetYMm,
-      vex::distanceUnits::mm,
-      kGpsHeadingOffsetDeg};
 
   void calibrate_inertial_sensor() {
     inertial.calibrate();
-    const bool gps_installed = gps_sensor.installed();
-    if (gps_installed) {
-      gps_sensor.calibrate();
-    }
-
-    while (inertial.isCalibrating() || (gps_installed && gps_sensor.isCalibrating())) {
+    while (inertial.isCalibrating()) {
       vex::wait(5, vex::msec);
     }
 
@@ -71,15 +55,6 @@ struct RobotHardware {
   void show_calibrated() {
     controller.Screen.setCursor(5, 1);
     controller.Screen.print("      calibrated!");
-  }
-
-  void show_gps_pose() {
-    controller.Screen.setCursor(1, 1);
-    const double x_mm = gps_sensor.xPosition(vex::distanceUnits::mm);
-    const double y_mm = gps_sensor.yPosition(vex::distanceUnits::mm);
-    const double heading_deg = gps_sensor.heading(vex::deg);
-
-    controller.Screen.print("%.2f %.2f %.2f", x_mm, y_mm, heading_deg);
   }
 
   void show_sensor_color(char color_code) {

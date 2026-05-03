@@ -1,7 +1,6 @@
 #ifndef BASIC_SRC_HARDWARE_ROBOTS_ROBOT_STATE_H_
 #define BASIC_SRC_HARDWARE_ROBOTS_ROBOT_STATE_H_
 
-#include "control/kalman/calculator.hpp"
 #include "vex.h"
 
 namespace basic::hardware::robots {
@@ -103,19 +102,10 @@ struct OverhangState {
 
 struct AutonomousState {
   bool initialized{false};
-  bool using_gps_observer{false};
-  bool gps_origin_initialized{false};
-  bool gps_position_filter_initialized{false};
   double target_heading_deg{0.0};
   double estimated_heading_deg{0.0};
   double estimated_x_mm{0.0};
   double estimated_y_mm{0.0};
-  double observer_origin_x_mm{0.0};
-  double observer_origin_y_mm{0.0};
-  double observer_origin_heading_deg{0.0};
-  double imu_heading_offset_deg{0.0};
-  basic::control::kalman::KalmanCalculator gps_x_filter;
-  basic::control::kalman::KalmanCalculator gps_y_filter;
 };
 
 struct RobotState {

@@ -8,8 +8,6 @@
 #include "hardware/sensors.h"
 #include "hardware/robots/robot_state.h"
 #include "input/controller.h"
-#include "control/kalman/calculator.hpp"
-
 namespace basic::hardware {
 
 namespace {
@@ -52,27 +50,11 @@ class BasicRobot final : public basic::app::Robot {
     print_laser_data_csv(10);
   }
 
-  void print_gps_data_csv(int refresh_time_ms){
-    printf("time_ms,x_mm,y_mm,heading_deg\n");
-    double start_time_ms=hardware_.brain.Timer.time(vex::msec);
-    while(true){
-      double x_mm=hardware_.gps_sensor.xPosition();
-      double y_mm=hardware_.gps_sensor.yPosition();
-      double heading_deg=hardware_.gps_sensor.heading();
-      x_mm=state_.autonomous.gps_x_filter.update(x_mm);
-      y_mm=state_.autonomous.gps_y_filter.update(y_mm);
-      double time_ms=hardware_.brain.Timer.time(vex::msec)-start_time_ms;
-      printf("%.2f,%.2f,%.2f,%.2f\n",time_ms,x_mm,y_mm,heading_deg);
-      vex::this_thread::sleep_for(refresh_time_ms);
-    }
-  }
-
   void print_laser_data_csv(int refresh_time_ms){
     printf("time_ms,distance_mm\n");
     double start_time_ms=hardware_.brain.Timer.time(vex::msec);
     while(true){
       double distance_mm=hardware_.laser_rangefinder.objectDistance(vex::mm);
-      distance_mm=state_.autonomous.gps_x_filter.update(distance_mm);
       double time_ms=hardware_.brain.Timer.time(vex::msec)-start_time_ms;
       printf("%.2f,%.2f\n",time_ms,distance_mm);
       vex::this_thread::sleep_for(refresh_time_ms);

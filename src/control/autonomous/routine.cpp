@@ -40,14 +40,6 @@ constexpr double kTurnApproachMinSpeedPct = 4.0;
 constexpr double kTurnMaxSpeedPct = 30.0;
 constexpr double kTurnApproachWindowDegrees = 12.0;
 
-constexpr double kGpsPositionBlend = 0.2;
-constexpr double kGpsHeadingBlend = 0.08;
-constexpr double kGpsHeadingCorrectionMaxDegrees = 25.0;
-constexpr double kGpsPositionMinimumQuality = 90.0;
-constexpr double kGpsPositionKalmanProcessNoise = 400.0;
-constexpr double kGpsPositionKalmanMeasurementNoise = 900.0;
-constexpr double kGpsPositionKalmanInitialCovariance = 900.0;
-
 constexpr double kGoToPosePositionToleranceMm = 30.0;
 constexpr double kGoToPoseHeadingToleranceDegrees = 3.0;
 constexpr double kGoToPoseMinSpeedPct = 8.0;
@@ -66,12 +58,6 @@ constexpr int kGoToPoseTimeoutPerDegreeMs = 40;
 
 using DriveMotorArray = std::array<vex::motor*, 8>;
 using SideMotorArray = std::array<vex::motor*, 4>;
-
-struct PoseMeasurement {
-  double x_mm{0.0};
-  double y_mm{0.0};
-  double heading_deg{0.0};
-};
 
 struct DriveSideRevolutions {
   double left_rev{0.0};
@@ -111,20 +97,6 @@ SideMotorArray right_drive_motors(RobotHardware& hardware) {
 
 bool should_run_autonomous(vex::competition& competition) {
   return competition.isEnabled() && competition.isAutonomous();
-}
-
-void configure_gps_position_filters(RobotState& state) {
-  state.autonomous.gps_x_filter.set_process_noise(kGpsPositionKalmanProcessNoise);
-  state.autonomous.gps_x_filter.set_measurement_noise(kGpsPositionKalmanMeasurementNoise);
-  state.autonomous.gps_x_filter.set_initial_covariance(kGpsPositionKalmanInitialCovariance);
-  state.autonomous.gps_x_filter.reset();
-
-  state.autonomous.gps_y_filter.set_process_noise(kGpsPositionKalmanProcessNoise);
-  state.autonomous.gps_y_filter.set_measurement_noise(kGpsPositionKalmanMeasurementNoise);
-  state.autonomous.gps_y_filter.set_initial_covariance(kGpsPositionKalmanInitialCovariance);
-  state.autonomous.gps_y_filter.reset();
-
-  state.autonomous.gps_position_filter_initialized = false;
 }
 
 double clamp_value(double value, double min_value, double max_value) {
@@ -198,10 +170,6 @@ double blend_angle_deg(double start_deg, double end_deg, double alpha) {
       start_deg + normalize_angle_deg(end_deg - start_deg) * clamp_unit_interval(alpha));
 }
 
-double lerp(double start_value, double end_value, double alpha) {
-  return start_value + (end_value - start_value) * clamp_unit_interval(alpha);
-}
-
 double heading_x_component(double heading_deg) {
   return std::sin(deg_to_rad(heading_deg));
 }
@@ -252,84 +220,8 @@ void stop_drive(RobotHardware& hardware, vex::brakeType brake_type) {
   }
 }
 
-bool try_read_gps_pose(RobotHardware& hardware, RobotState& state, PoseMeasurement& pose) {
-  if (!hardware.gps_sensor.installed() || hardware.gps_sensor.isCalibrating()) {
-    return false;
-  }
-
-  const double quality = hardware.gps_sensor.quality();
-  if (!std::isfinite(quality) || quality <= kGpsPositionMinimumQuality) {
-    return false;
-  }
-
-  pose.x_mm = hardware.gps_sensor.xPosition(vex::distanceUnits::mm);
-  pose.y_mm = hardware.gps_sensor.yPosition(vex::distanceUnits::mm);
-  pose.heading_deg = normalize_angle_deg(hardware.gps_sensor.heading(vex::deg));
-  if (!std::isfinite(pose.x_mm) ||
-      !std::isfinite(pose.y_mm) ||
-      !std::isfinite(pose.heading_deg)) {
-    return false;
-  }
-
-  if (!state.autonomous.gps_position_filter_initialized) {
-    state.autonomous.gps_x_filter.reset(pose.x_mm, kGpsPositionKalmanInitialCovariance);
-    state.autonomous.gps_y_filter.reset(pose.y_mm, kGpsPositionKalmanInitialCovariance);
-    state.autonomous.gps_position_filter_initialized = true;
-  } else {
-    pose.x_mm = state.autonomous.gps_x_filter.update(pose.x_mm);
-    pose.y_mm = state.autonomous.gps_y_filter.update(pose.y_mm);
-  }
-
-  return std::isfinite(pose.x_mm) && std::isfinite(pose.y_mm);
-}
-
-double local_inertial_heading_deg(RobotHardware& hardware, const RobotState& state) {
-  return normalize_angle_deg(
-      state.autonomous.imu_heading_offset_deg + hardware.inertial.rotation(vex::deg));
-}
-
-void initialize_gps_origin(
-    RobotHardware& hardware,
-    RobotState& state,
-    const PoseMeasurement& absolute_gps_pose) {
-  state.autonomous.observer_origin_x_mm =
-      absolute_gps_pose.x_mm - state.autonomous.estimated_x_mm;
-  state.autonomous.observer_origin_y_mm =
-      absolute_gps_pose.y_mm - state.autonomous.estimated_y_mm;
-  state.autonomous.observer_origin_heading_deg = normalize_angle_deg(
-      absolute_gps_pose.heading_deg - state.autonomous.estimated_heading_deg);
-  state.autonomous.imu_heading_offset_deg = normalize_angle_deg(
-      state.autonomous.estimated_heading_deg - hardware.inertial.rotation(vex::deg));
-  state.autonomous.gps_origin_initialized = true;
-}
-
-bool try_read_local_gps_pose(
-    RobotHardware& hardware,
-    RobotState& state,
-    PoseMeasurement& local_pose) {
-  PoseMeasurement absolute_pose{};
-  if (!try_read_gps_pose(hardware, state, absolute_pose)) {
-    state.autonomous.using_gps_observer = false;
-    state.autonomous.gps_position_filter_initialized = false;
-    return false;
-  }
-
-  if (!state.autonomous.gps_origin_initialized) {
-    initialize_gps_origin(hardware, state, absolute_pose);
-  }
-
-  local_pose.x_mm = absolute_pose.x_mm - state.autonomous.observer_origin_x_mm;
-  local_pose.y_mm = absolute_pose.y_mm - state.autonomous.observer_origin_y_mm;
-  local_pose.heading_deg = normalize_angle_deg(
-      absolute_pose.heading_deg - state.autonomous.observer_origin_heading_deg);
-  state.autonomous.using_gps_observer = true;
-  return true;
-}
-
-void set_autonomous_pose_from_measurement(RobotState& state, const PoseMeasurement& pose) {
-  state.autonomous.estimated_x_mm = pose.x_mm;
-  state.autonomous.estimated_y_mm = pose.y_mm;
-  state.autonomous.estimated_heading_deg = pose.heading_deg;
+double local_inertial_heading_deg(RobotHardware& hardware) {
+  return normalize_angle_deg(hardware.inertial.rotation(vex::deg));
 }
 
 double update_autonomous_pose_estimate(
@@ -338,7 +230,7 @@ double update_autonomous_pose_estimate(
     DriveSideRevolutions& previous_drive_sample) {
   const DriveSideRevolutions current_drive_sample = sample_drive_side_revolutions(hardware);
   const double previous_heading_deg = state.autonomous.estimated_heading_deg;
-  const double current_heading_deg = local_inertial_heading_deg(hardware, state);
+  const double current_heading_deg = local_inertial_heading_deg(hardware);
   const double delta_mm = center_delta_mm(previous_drive_sample, current_drive_sample);
   previous_drive_sample = current_drive_sample;
 
@@ -348,22 +240,6 @@ double update_autonomous_pose_estimate(
     state.autonomous.estimated_y_mm += delta_mm * heading_y_component(travel_heading_deg);
   }
   state.autonomous.estimated_heading_deg = current_heading_deg;
-
-  PoseMeasurement local_gps_pose{};
-  if (try_read_local_gps_pose(hardware, state, local_gps_pose)) {
-    state.autonomous.estimated_x_mm =
-        lerp(state.autonomous.estimated_x_mm, local_gps_pose.x_mm, kGpsPositionBlend);
-    state.autonomous.estimated_y_mm =
-        lerp(state.autonomous.estimated_y_mm, local_gps_pose.y_mm, kGpsPositionBlend);
-
-    const double heading_error_deg =
-        normalize_angle_deg(local_gps_pose.heading_deg - state.autonomous.estimated_heading_deg);
-    if (std::fabs(heading_error_deg) <= kGpsHeadingCorrectionMaxDegrees) {
-      state.autonomous.imu_heading_offset_deg = normalize_angle_deg(
-          state.autonomous.imu_heading_offset_deg + heading_error_deg * kGpsHeadingBlend);
-      state.autonomous.estimated_heading_deg = local_inertial_heading_deg(hardware, state);
-    }
-  }
 
   return state.autonomous.estimated_heading_deg;
 }
@@ -377,24 +253,10 @@ void reset_autonomous_frame(RobotHardware& hardware, RobotState& state) {
   hardware.inertial.resetRotation();
   state.autonomous = AutonomousState{};
   state.autonomous.initialized = true;
-  configure_gps_position_filters(state);
-
-  PoseMeasurement gps_pose{};
-  if (try_read_gps_pose(hardware, state, gps_pose)) {
-    initialize_gps_origin(hardware, state, gps_pose);
-    PoseMeasurement local_pose{};
-    local_pose.x_mm = gps_pose.x_mm - state.autonomous.observer_origin_x_mm;
-    local_pose.y_mm = gps_pose.y_mm - state.autonomous.observer_origin_y_mm;
-    local_pose.heading_deg = normalize_angle_deg(
-        gps_pose.heading_deg - state.autonomous.observer_origin_heading_deg);
-    set_autonomous_pose_from_measurement(state, local_pose);
-    state.autonomous.using_gps_observer = true;
-    state.autonomous.target_heading_deg = local_pose.heading_deg;
-    return;
-  }
-
   state.autonomous.target_heading_deg = 0.0;
   state.autonomous.estimated_heading_deg = 0.0;
+  state.autonomous.estimated_x_mm = 0.0;
+  state.autonomous.estimated_y_mm = 0.0;
 }
 
 void ensure_autonomous_frame(RobotHardware& hardware, RobotState& state) {
@@ -688,9 +550,6 @@ void go_to_pose(
         hardware,
         linear_speed_pct + 0.5 * turn_command_pct,
         linear_speed_pct - 0.5 * turn_command_pct);
-
-    hardware.show_gps_pose();
-
     vex::this_thread::sleep_for(kAutonomousLoopDelayMs);
   }
 
@@ -766,6 +625,13 @@ void drive_to_laser_distance_mm(
 }
 
 void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& competition) {
+  constexpr double kFirstDriveDistanceMm = 710.0;
+  constexpr double kFirstLaserTargetDistanceMm = 165.0;
+  constexpr double kFirstRetreatAfterLaserMm = -320.0;
+  constexpr double kSecondRetreatBeforeLaserMm = -377.0;
+  constexpr double kSecondLaserTargetDistanceMm = 467.0;
+  constexpr double kFinalDriveDistanceMm = 492.0;
+
   state.chassis.stop_brake_type = vex::hold;
   reset_autonomous_frame(hardware, state);
   //hardware.calibrate_inertial_sensor();
@@ -775,16 +641,16 @@ void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& c
   //update_middle_overhang_mode(hardware,state);
   //update_upper_overhang_mode(hardware,state);
   
-  drive_distance_mm(hardware, state, competition, 710.0);
+  drive_distance_mm(hardware, state, competition, kFirstDriveDistanceMm);
   turn_deg(hardware, state, competition, -90.0);
-  hardware.show_gps_pose();
-  drive_distance_mm(hardware, state, competition, 377.0);
-  drive_distance_mm(hardware, state, competition, -320.0);
-  turn_deg(hardware, state, competition, 180.0);
-  hardware.show_gps_pose();
+  drive_to_laser_distance_mm(hardware, state, competition, kFirstLaserTargetDistanceMm);
+  drive_distance_mm(hardware, state, competition, kFirstRetreatAfterLaserMm);
+  turn_deg(hardware, state, competition, 90.0);
+  drive_distance_mm(hardware, state, competition, kSecondRetreatBeforeLaserMm);
+  drive_to_laser_distance_mm(hardware, state, competition, kSecondLaserTargetDistanceMm);
+  turn_deg(hardware, state, competition, 90.0);
   update_under_overhang_mode(hardware,state);
-  drive_distance_mm(hardware, state, competition, 492.0);
-  hardware.show_gps_pose();
+  drive_distance_mm(hardware, state, competition, kFinalDriveDistanceMm);
   stop_drive(hardware, vex::hold);
 }
 
