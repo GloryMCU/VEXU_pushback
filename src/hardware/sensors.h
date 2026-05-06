@@ -6,7 +6,7 @@
 
 namespace basic::hardware::robots {
 
-void sensor_update(RobotHardware& hardware, RobotState& state);
+    void sensor_update(RobotHardware& hardware, RobotState& state, vex::color target);
 
 }  // namespace basic::hardware::robots
 

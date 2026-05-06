@@ -6,7 +6,7 @@
 namespace basic::hardware::robots {
 
 namespace {
-
+//trans1 trans2 trans3 trans4 under middle upper
 constexpr std::size_t kIndexedMotorCount = 7;
 constexpr std::array<int, kIndexedMotorCount> kOffSpeeds{{0, 0, 0, 0, 0, 0 ,0}};
 constexpr std::array<int, kIndexedMotorCount> kLegacyIntakeSpeeds{{0, 0, -100, 50, -100, 80 ,-70}};
@@ -54,7 +54,7 @@ void apply_indexed_mode(RobotHardware& hardware, const MechanismState& mechanism
       &hardware.trans_motor4,
       &hardware.under_motor1,
       &hardware.middle_motor1,
-      &hardware.up_motor1,
+      &hardware.upper_motor1,
   }};
   const std::array<int, kIndexedMotorCount>& speeds = indexed_motor_speeds(mechanism);
   for (std::size_t index = 0; index < kIndexedMotorCount; ++index) {

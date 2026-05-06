@@ -47,7 +47,13 @@ class BasicRobot final : public basic::app::Robot {
 
   void run_background_tasks(){
     //print_chassic_data_csv(10);
-    print_laser_data_csv(10);
+    //print_laser_data_csv(10);
+    //print_color_data(10);
+    while(true){
+      robots::sensor_update(hardware_,state_,vex::color::red);
+      vex::this_thread::sleep_for(10);
+    }
+    
   }
 
   void print_laser_data_csv(int refresh_time_ms){
@@ -82,10 +88,26 @@ class BasicRobot final : public basic::app::Robot {
     }
   }
 
+  void print_color_data(int refresh_time_ms){
+    hardware_.color_sensor.setLight(vex::ledState::on);
+    hardware_.color_sensor.setLightPower(50, vex::percent);
+    while(true){
+      hardware_.controller.Screen.setCursor(1,1);
+      vex::color current_color=hardware_.color_sensor.color();
+      if(current_color==vex::color::red){
+        hardware_.controller.Screen.print("red");
+      }else if(current_color==vex::color::blue){
+        hardware_.controller.Screen.print("blue");
+      }else{
+        hardware_.controller.Screen.print("others");
+      }
+      vex::this_thread::sleep_for(refresh_time_ms);
+    }
+  }
   void run_driver_control_loop() {
     while (should_run_driver_control()) {
       robots::controller_update(hardware_, state_);
-      robots::sensor_update(hardware_, state_);
+      //robots::sensor_update(hardware_, state_);
       robots::chassis_update(hardware_, state_);
       robots::mechanism_update(hardware_, state_);
       vex::this_thread::sleep_for(robots::kRefreshTime);
@@ -127,7 +149,7 @@ class BasicRobot final : public basic::app::Robot {
     robots::stopcontrol(hardware_.trans_motor3);
     robots::stopcontrol(hardware_.under_motor1);
     robots::stopcontrol(hardware_.middle_motor1);
-    robots::stopcontrol(hardware_.up_motor1);
+    robots::stopcontrol(hardware_.upper_motor1);
 
     robots::stopcontrol(hardware_.under_overhang_motor, vex::hold);
     robots::stopcontrol(hardware_.middle_overhang_motor, vex::hold);

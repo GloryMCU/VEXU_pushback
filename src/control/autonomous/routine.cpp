@@ -639,9 +639,11 @@ void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& c
   //drive_distance_mm(hardware, state, competition, kFirstDriveDistanceMm);
   turn_deg(hardware, state, competition, -90.0);
   update_under_overhang_mode(hardware,state);
-  drive_to_laser_distance_mm(hardware, state, competition, 135.0);
 
   update_intake_mode(hardware,state);
+  drive_to_laser_distance_mm(hardware, state, competition, 135.0);
+  hardware.under_motor1.spinFor(-60, vex::deg, 30, vex::velocityUnits::pct);
+  hardware.under_motor1.spinFor(60, vex::deg, 30, vex::velocityUnits::pct);
   vex::this_thread::sleep_for(5000);
   update_intake_mode(hardware,state);
 
@@ -652,6 +654,7 @@ void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& c
   drive_to_laser_distance_mm(hardware, state, competition, 510.0);
   turn_deg(hardware, state, competition, 90.0);
   drive_distance_mm(hardware, state, competition, 492.0);
+  
 
   update_upperthrow_mode(hardware,state);
   vex::this_thread::sleep_for(5000);
@@ -661,12 +664,17 @@ void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& c
   drive_distance_mm(hardware, state, competition, -200.0);
   turn_deg(hardware, state, competition, -90.0);
   drive_distance_mm(hardware, state, competition, -400.0);
-  drive_to_laser_distance_mm(hardware, state, competition, 830.0);
+  drive_to_laser_distance_mm(hardware, state, competition, 820.0);
   turn_deg(hardware, state, competition, 90.0);
-  drive_distance_mm(hardware, state, competition, 450.0);
-  drive_distance_mm(hardware, state, competition, -407.5);
+  drive_distance_mm(hardware, state, competition, 600.0);
+  drive_distance_mm(hardware, state, competition, -557.5);
   turn_deg(hardware, state, competition, 45.0);
-  drive_distance_mm(hardware, state, competition, 680.0);
+  update_under_overhang_mode(hardware,state);
+  drive_distance_mm(hardware, state, competition, 880.0);
+
+  update_middlethrow_mode(hardware,state);
+  vex::this_thread::sleep_for(5000);
+  update_middlethrow_mode(hardware,state);
 
   stop_drive(hardware, vex::hold);
 }
