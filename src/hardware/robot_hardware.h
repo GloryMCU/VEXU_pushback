@@ -23,7 +23,7 @@ struct RobotHardware {
   vex::motor motor_bl2{vex::PORT5, vex::ratio6_1, true};
 
   vex::motor middle_motor1{vex::PORT16, vex::ratio6_1, true};
-  vex::motor under_motor1{vex::PORT13, vex::ratio18_1, true};
+  vex::motor under_motor1{vex::PORT4, vex::ratio18_1, true};
   vex::motor up_motor1{vex::PORT10, vex::ratio6_1, true};
 
   vex::motor trans_motor1{vex::PORT19, vex::ratio6_1, true};
@@ -35,9 +35,8 @@ struct RobotHardware {
   vex::motor upper_overhang_motor{vex::PORT15, vex::ratio6_1, true};
   vex::motor middle_overhang_motor{vex::PORT17, vex::ratio6_1, true};
 
-
   vex::motor serial_sensor{vex::PORT4, vex::ratio6_1, true};
-  vex::distance laser_rangefinder{vex::PORT14};
+  vex::distance laser_rangefinder{vex::PORT13};
   vex::brain brain;
   vex::controller controller{vex::controllerType::primary};
   vex::inertial inertial{vex::PORT11};

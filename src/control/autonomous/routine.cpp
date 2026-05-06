@@ -626,10 +626,10 @@ void drive_to_laser_distance_mm(
 
 void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& competition) {
   constexpr double kFirstDriveDistanceMm = 710.0;
-  constexpr double kFirstLaserTargetDistanceMm = 165.0;
+  constexpr double kFirstLaserTargetDistanceMm = 135.0;
   constexpr double kFirstRetreatAfterLaserMm = -320.0;
   constexpr double kSecondRetreatBeforeLaserMm = -377.0;
-  constexpr double kSecondLaserTargetDistanceMm = 467.0;
+  constexpr double kSecondLaserTargetDistanceMm = 510.0;
   constexpr double kFinalDriveDistanceMm = 492.0;
 
   state.chassis.stop_brake_type = vex::hold;
@@ -638,19 +638,31 @@ void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& c
   //hardware.show_calibrated();
 
   //update_under_overhang_mode(hardware,state);
-  //update_middle_overhang_mode(hardware,state);
-  //update_upper_overhang_mode(hardware,state);
+  update_middle_overhang_mode(hardware,state);
+  update_upper_overhang_mode(hardware,state);
   
-  drive_distance_mm(hardware, state, competition, kFirstDriveDistanceMm);
+  drive_to_laser_distance_mm(hardware,state,competition,545);
+  //drive_distance_mm(hardware, state, competition, kFirstDriveDistanceMm);
   turn_deg(hardware, state, competition, -90.0);
+  update_under_overhang_mode(hardware,state);
   drive_to_laser_distance_mm(hardware, state, competition, kFirstLaserTargetDistanceMm);
+
+  update_intake_mode(hardware,state);
+  vex::this_thread::sleep_for(5000);
+  update_intake_mode(hardware,state);
+
   drive_distance_mm(hardware, state, competition, kFirstRetreatAfterLaserMm);
+  update_under_overhang_mode(hardware,state);
   turn_deg(hardware, state, competition, 90.0);
   drive_distance_mm(hardware, state, competition, kSecondRetreatBeforeLaserMm);
   drive_to_laser_distance_mm(hardware, state, competition, kSecondLaserTargetDistanceMm);
   turn_deg(hardware, state, competition, 90.0);
-  update_under_overhang_mode(hardware,state);
   drive_distance_mm(hardware, state, competition, kFinalDriveDistanceMm);
+
+  update_upperthrow_mode(hardware,state);
+  vex::this_thread::sleep_for(5000);
+  update_upperthrow_mode(hardware,state);
+
   stop_drive(hardware, vex::hold);
 }
 
