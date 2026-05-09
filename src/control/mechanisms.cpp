@@ -12,7 +12,7 @@ constexpr std::array<int, kIndexedMotorCount> kOffSpeeds{{0, 0, 0, 0, 0, 0 ,0}};
 constexpr std::array<int, kIndexedMotorCount> kLegacyIntakeSpeeds{{0, 0, -100, 50, -100, 80 ,-70}};
 constexpr std::array<int, kIndexedMotorCount> kUnderThrowSpeeds{{-100, 100, -100, 0, 100, 0, 0}};
 constexpr std::array<int, kIndexedMotorCount> kMiddleThrowSpeeds{{-100, 100, -100, 100, -100, -100, 0}};
-constexpr std::array<int, kIndexedMotorCount> kUpperThrowSpeeds{{-100, 100, -100, 100, -100, 100, 100}};
+constexpr std::array<int, kIndexedMotorCount> kUpperThrowSpeeds{{-100, 100, -100, 100, -100, 70, 70}};
 
 void set_motor_power(vex::motor& motor, double speed, vex::brakeType type = vex::coast) {
   if (speed) {
