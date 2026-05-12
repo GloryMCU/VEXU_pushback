@@ -1,15 +1,23 @@
-#include "control/mechanisms.h"
+#include "control/basic_robot/mechanisms.h"
+
 #include "control/motor_control.h"
 
 #include <array>
 
-namespace basic::hardware::robots {
+namespace basic::control::basic_robot {
 
 namespace {
-//trans1 trans2 trans3 trans4 under middle upper
+
+using basic::control::stopcontrol;
+using basic::control::velocitycontrol;
+using basic::hardware::basic_robot::IndexedMechanismMode;
+using basic::hardware::basic_robot::MechanismState;
+using basic::hardware::basic_robot::RobotHardware;
+using basic::hardware::basic_robot::RobotState;
+
 constexpr std::size_t kIndexedMotorCount = 7;
-constexpr std::array<int, kIndexedMotorCount> kOffSpeeds{{0, 0, 0, 0, 0, 0 ,0}};
-constexpr std::array<int, kIndexedMotorCount> kLegacyIntakeSpeeds{{0, 0, -100, 50, -100, 80 ,-70}};
+constexpr std::array<int, kIndexedMotorCount> kOffSpeeds{{0, 0, 0, 0, 0, 0, 0}};
+constexpr std::array<int, kIndexedMotorCount> kLegacyIntakeSpeeds{{0, 0, -100, 50, -100, 80, -70}};
 constexpr std::array<int, kIndexedMotorCount> kUnderThrowSpeeds{{-100, 100, -100, 0, 100, 0, 0}};
 constexpr std::array<int, kIndexedMotorCount> kMiddleThrowSpeeds{{-100, 100, -100, 100, -100, -100, 0}};
 constexpr std::array<int, kIndexedMotorCount> kUpperThrowSpeeds{{-100, 100, -100, 100, -100, 70, 70}};
@@ -33,13 +41,13 @@ void toggle_indexed_mode(MechanismState& mechanism, IndexedMechanismMode request
 const std::array<int, kIndexedMotorCount>& indexed_motor_speeds(const MechanismState& mechanism) {
   switch (mechanism.indexed_mode) {
     case IndexedMechanismMode::kLegacyIntake:
-      return kLegacyIntakeSpeeds;break;
+      return kLegacyIntakeSpeeds;
     case IndexedMechanismMode::kUnderTrow:
-      return kUnderThrowSpeeds;break;
+      return kUnderThrowSpeeds;
     case IndexedMechanismMode::kMiddleThrow:
-      return kMiddleThrowSpeeds;break;
+      return kMiddleThrowSpeeds;
     case IndexedMechanismMode::kUpperThrow:
-      return kUpperThrowSpeeds;break;
+      return kUpperThrowSpeeds;
     case IndexedMechanismMode::kOff:
     default:
       return kOffSpeeds;
@@ -62,7 +70,7 @@ void apply_indexed_mode(RobotHardware& hardware, const MechanismState& mechanism
   }
 }
 
-void update_under_overhang(RobotHardware& hardware, const ControllerInputState& input) {
+void update_under_overhang(RobotHardware& hardware, const basic::hardware::shared::ControllerInputState& input) {
   if (input.x) {
     velocitycontrol(hardware.under_overhang_motor, -20, vex::pct);
   }
@@ -74,7 +82,7 @@ void update_under_overhang(RobotHardware& hardware, const ControllerInputState& 
   }
 }
 
-void update_middle_overhang(RobotHardware& hardware, const ControllerInputState& input) {
+void update_middle_overhang(RobotHardware& hardware, const basic::hardware::shared::ControllerInputState& input) {
   if (input.left) {
     velocitycontrol(hardware.middle_overhang_motor, 20, vex::pct);
   }
@@ -86,7 +94,7 @@ void update_middle_overhang(RobotHardware& hardware, const ControllerInputState&
   }
 }
 
-void update_upper_overhang(RobotHardware& hardware, const ControllerInputState& input) {
+void update_upper_overhang(RobotHardware& hardware, const basic::hardware::shared::ControllerInputState& input) {
   if (input.up) {
     velocitycontrol(hardware.upper_overhang_motor, -50, vex::pct);
   }
@@ -101,7 +109,7 @@ void update_upper_overhang(RobotHardware& hardware, const ControllerInputState& 
 }  // namespace
 
 void mechanism_update(RobotHardware& hardware, RobotState& state) {
-  const ControllerInputState& input = state.controller;
+  const basic::hardware::shared::ControllerInputState& input = state.controller;
   MechanismState& mechanism = state.mechanism;
 
   update_upper_overhang(hardware, input);
@@ -111,7 +119,7 @@ void mechanism_update(RobotHardware& hardware, RobotState& state) {
   if (input.press_a) {
     toggle_indexed_mode(mechanism, IndexedMechanismMode::kLegacyIntake);
   }
-  if(input.press_l2){
+  if (input.press_l2) {
     toggle_indexed_mode(mechanism, IndexedMechanismMode::kUnderTrow);
   }
   if (input.press_l1) {
@@ -124,28 +132,28 @@ void mechanism_update(RobotHardware& hardware, RobotState& state) {
   apply_indexed_mode(hardware, mechanism);
 }
 
-void update_intake_mode(RobotHardware& hardware, RobotState& state){
+void update_intake_mode(RobotHardware& hardware, RobotState& state) {
   MechanismState& mechanism = state.mechanism;
   toggle_indexed_mode(mechanism, IndexedMechanismMode::kLegacyIntake);
   apply_indexed_mode(hardware, mechanism);
 }
 
-void update_underthrow_mode(RobotHardware& hardware, RobotState& state){
+void update_underthrow_mode(RobotHardware& hardware, RobotState& state) {
   MechanismState& mechanism = state.mechanism;
   toggle_indexed_mode(mechanism, IndexedMechanismMode::kUnderTrow);
   apply_indexed_mode(hardware, mechanism);
 }
 
-void update_middlethrow_mode(RobotHardware& hardware, RobotState& state){
+void update_middlethrow_mode(RobotHardware& hardware, RobotState& state) {
   MechanismState& mechanism = state.mechanism;
   toggle_indexed_mode(mechanism, IndexedMechanismMode::kMiddleThrow);
   apply_indexed_mode(hardware, mechanism);
 }
 
-void update_upperthrow_mode(RobotHardware& hardware, RobotState& state){
+void update_upperthrow_mode(RobotHardware& hardware, RobotState& state) {
   MechanismState& mechanism = state.mechanism;
   toggle_indexed_mode(mechanism, IndexedMechanismMode::kUpperThrow);
   apply_indexed_mode(hardware, mechanism);
 }
 
-}  // namespace basic::hardware::robots
+}  // namespace basic::control::basic_robot

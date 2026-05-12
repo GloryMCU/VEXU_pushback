@@ -1,15 +1,21 @@
-#include "control/autonomous/routine.h"
+#include "control/basic_robot/autonomous/routine.h"
 
-#include "control/mechanisms.h"
+#include "control/basic_robot/mechanisms.h"
 #include "control/motor_control.h"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 
-namespace basic::hardware::robots::autonomous {
+namespace basic::control::basic_robot::autonomous {
 
 namespace {
+
+using basic::control::stopcontrol;
+using basic::control::velocitycontrol;
+using basic::hardware::basic_robot::OverhangMode;
+using basic::hardware::basic_robot::RobotHardware;
+using basic::hardware::basic_robot::RobotState;
 
 constexpr double kMillimetersPerWheelRevolution = 212.8;
 constexpr double kPi = 3.14159265358979323846;
@@ -17,7 +23,7 @@ constexpr int kAutonomousLoopDelayMs = 10;
 constexpr int kAutonomousSettleDelayMs = 150;
 
 constexpr double kDriveMinSpeedPct = 12.0;
- double kDriveMaxSpeedPct = 22.5;
+double kDriveMaxSpeedPct = 22.5;
 constexpr double kDriveAccelerationWindowMm = 180.0;
 constexpr double kDriveDecelerationWindowMm = 260.0;
 constexpr double kDriveHeadingProportionalGain = 0.6;
@@ -251,7 +257,7 @@ void refresh_autonomous_pose_estimate(RobotHardware& hardware, RobotState& state
 
 void reset_autonomous_frame(RobotHardware& hardware, RobotState& state) {
   hardware.inertial.resetRotation();
-  state.autonomous = AutonomousState{};
+  state.autonomous = basic::hardware::shared::AutonomousState{};
   state.autonomous.initialized = true;
   state.autonomous.target_heading_deg = 0.0;
   state.autonomous.estimated_heading_deg = 0.0;
@@ -628,40 +634,33 @@ void drive_to_laser_distance_mm(
 }
 
 void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& competition) {
-
   state.chassis.stop_brake_type = vex::hold;
   reset_autonomous_frame(hardware, state);
-  //hardware.calibrate_inertial_sensor();
-  //hardware.show_calibrated();
 
-  //update_under_overhang_mode(hardware,state);
-  update_middle_overhang_mode(hardware,state);
-  update_upper_overhang_mode(hardware,state);
-  
-  drive_to_laser_distance_mm(hardware,state,competition,525.0);
-  //drive_distance_mm(hardware, state, competition, kFirstDriveDistanceMm);
+  update_middle_overhang_mode(hardware, state);
+  update_upper_overhang_mode(hardware, state);
+
+  drive_to_laser_distance_mm(hardware, state, competition, 525.0);
   turn_deg(hardware, state, competition, -90.0);
-  update_under_overhang_mode(hardware,state);
+  update_under_overhang_mode(hardware, state);
 
-  update_intake_mode(hardware,state);
+  update_intake_mode(hardware, state);
   drive_to_laser_distance_mm(hardware, state, competition, 135.0, 30.0);
   vex::this_thread::sleep_for(5000);
-  update_intake_mode(hardware,state);
+  update_intake_mode(hardware, state);
 
   drive_distance_mm(hardware, state, competition, -320.0);
-  update_under_overhang_mode(hardware,state);
+  update_under_overhang_mode(hardware, state);
   turn_deg(hardware, state, competition, 90.0);
   drive_distance_mm(hardware, state, competition, -377.0);
   drive_to_laser_distance_mm(hardware, state, competition, 510.0);
   turn_deg(hardware, state, competition, 90.0);
   drive_distance_mm(hardware, state, competition, 502.0);
-  
 
-  update_upperthrow_mode(hardware,state);
+  update_upperthrow_mode(hardware, state);
   vex::this_thread::sleep_for(5000);
-  update_upperthrow_mode(hardware,state);
+  update_upperthrow_mode(hardware, state);
 
-  // drive_distance_mm(hardware, state, competition, -397.5);
   drive_distance_mm(hardware, state, competition, -200.0);
   turn_deg(hardware, state, competition, -90.0);
   drive_distance_mm(hardware, state, competition, -400.0);
@@ -670,14 +669,14 @@ void run_routine(RobotHardware& hardware, RobotState& state, vex::competition& c
   drive_distance_mm(hardware, state, competition, 600.0);
   drive_distance_mm(hardware, state, competition, -577.5);
   turn_deg(hardware, state, competition, 45.0);
-  update_under_overhang_mode(hardware,state);
+  update_under_overhang_mode(hardware, state);
   drive_distance_mm(hardware, state, competition, 900.0);
 
-  update_middlethrow_mode(hardware,state);
+  update_middlethrow_mode(hardware, state);
   vex::this_thread::sleep_for(5000);
-  update_middlethrow_mode(hardware,state);
+  update_middlethrow_mode(hardware, state);
 
   stop_drive(hardware, vex::hold);
 }
 
-}  // namespace basic::hardware::robots::autonomous
+}  // namespace basic::control::basic_robot::autonomous

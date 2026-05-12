@@ -3,7 +3,7 @@
 
 #include "vex.h"
 
-namespace basic::hardware::robots {
+namespace basic::control {
 
 inline constexpr double kMotorTorqueConstantNmPerAmp = 0.84;
 inline constexpr double kMotorRatedVoltageVolts = 12.0;
@@ -32,6 +32,6 @@ bool get_spinning(vex::motor& motor);
 bool get_done(vex::motor& motor);
 bool get_installed(vex::motor& motor);
 
-}  // namespace basic::hardware::robots
+}  // namespace basic::control
 
 #endif

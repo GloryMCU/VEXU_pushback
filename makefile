@@ -15,6 +15,8 @@ SRC_C += $(wildcard src/*/*.cpp)
 SRC_C += $(wildcard src/*/*.c)
 SRC_C += $(wildcard src/*/*/*.cpp)
 SRC_C += $(wildcard src/*/*/*.c)
+SRC_C += $(wildcard src/*/*/*/*.cpp)
+SRC_C += $(wildcard src/*/*/*/*.c)
 
 OBJ = $(addprefix $(BUILD)/, $(addsuffix .o, $(basename $(SRC_C))) )
 
@@ -25,9 +27,11 @@ SRC_H += $(wildcard include/*/*/*.h)
 SRC_H += $(wildcard src/*.h)
 SRC_H += $(wildcard src/*/*.h)
 SRC_H += $(wildcard src/*/*/*.h)
+SRC_H += $(wildcard src/*/*/*/*.h)
 SRC_H += $(wildcard src/*.hpp)
 SRC_H += $(wildcard src/*/*.hpp)
 SRC_H += $(wildcard src/*/*/*.hpp)
+SRC_H += $(wildcard src/*/*/*/*.hpp)
 
 # additional dependancies
 SRC_A  = makefile

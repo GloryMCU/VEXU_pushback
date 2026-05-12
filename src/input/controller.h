@@ -1,13 +1,15 @@
 #ifndef BASIC_SRC_INPUT_CONTROLLER_H_
 #define BASIC_SRC_INPUT_CONTROLLER_H_
 
-#include "hardware/robot_hardware.h"
-#include "hardware/robots/robot_state.h"
+#include "hardware/shared/state_types.h"
 
-namespace basic::hardware::robots {
+namespace basic::input {
 
-void controller_update(RobotHardware& hardware, RobotState& state);
+void controller_update(
+    vex::brain& brain,
+    vex::controller& controller,
+    basic::hardware::shared::ControllerInputState& state);
 
-}  // namespace basic::hardware::robots
+}  // namespace basic::input
 
 #endif

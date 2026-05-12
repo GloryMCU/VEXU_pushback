@@ -2,9 +2,9 @@
 
 ## 文件位置
 
-- 入口绑定：`src/hardware/robots/basic_robot.cpp`
-- 自动逻辑声明：`src/control/autonomous/routine.h`
-- 自动逻辑实现：`src/control/autonomous/routine.cpp`
+- 入口绑定：`src/hardware/basic_robot/basic_robot.cpp`
+- 自动逻辑声明：`src/control/basic_robot/autonomous/routine.h`
+- 自动逻辑实现：`src/control/basic_robot/autonomous/routine.cpp`
 
 ## 当前自动流程
 
@@ -29,7 +29,7 @@
 `basic_robot.cpp` 只负责两件事：
 
 - 把 `competition.autonomous(...)` 绑定到自动入口
-- 在自动开始时调用 `robots::autonomous::run_routine(...)`
+- 在自动开始时调用 `basic::control::basic_robot::autonomous::run_routine(...)`
 
 真正的运动控制细节全部放在 `control/autonomous/routine.cpp`，避免把功能实现塞进机器人装配文件。
 
@@ -38,7 +38,7 @@
 自动代码使用：
 
 ```cpp
-namespace basic::hardware::robots::autonomous
+namespace basic::control::basic_robot::autonomous
 ```
 
 这样可以和现有的：

@@ -2,9 +2,11 @@
 
 #include <cmath>
 
-namespace basic::hardware::robots {
+namespace basic::input {
 
 namespace {
+
+using basic::hardware::shared::ControllerInputState;
 
 void calculate_button_rating(ControllerInputState& state) {
   state.rating[0] = std::abs(state.axis1 - state.last_axis1) * 0.005;
@@ -45,8 +47,10 @@ void update_press_events(ControllerInputState& state) {
 
 }  // namespace
 
-void controller_update(RobotHardware& hardware, RobotState& state) {
-  ControllerInputState& input = state.controller;
+void controller_update(
+    vex::brain& brain,
+    vex::controller& controller,
+    basic::hardware::shared::ControllerInputState& input) {
 
   input.last_axis1 = input.axis1;
   input.last_axis2 = input.axis2;
@@ -66,29 +70,29 @@ void controller_update(RobotHardware& hardware, RobotState& state) {
   input.last_up = input.up;
   input.last_down = input.down;
 
-  input.time_ms = hardware.brain.timer(vex::timeUnits::msec);
+  input.time_ms = brain.timer(vex::timeUnits::msec);
 
-  input.axis1 = hardware.controller.Axis1.position(vex::percentUnits::pct);
-  input.axis2 = hardware.controller.Axis2.position(vex::percentUnits::pct);
-  input.axis3 = hardware.controller.Axis3.position(vex::percentUnits::pct);
-  input.axis4 = hardware.controller.Axis4.position(vex::percentUnits::pct);
+  input.axis1 = controller.Axis1.position(vex::percentUnits::pct);
+  input.axis2 = controller.Axis2.position(vex::percentUnits::pct);
+  input.axis3 = controller.Axis3.position(vex::percentUnits::pct);
+  input.axis4 = controller.Axis4.position(vex::percentUnits::pct);
 
-  input.l1 = hardware.controller.ButtonL1.pressing();
-  input.l2 = hardware.controller.ButtonL2.pressing();
-  input.r1 = hardware.controller.ButtonR1.pressing();
-  input.r2 = hardware.controller.ButtonR2.pressing();
-  input.x = hardware.controller.ButtonX.pressing();
-  input.y = hardware.controller.ButtonY.pressing();
-  input.a = hardware.controller.ButtonA.pressing();
-  input.b = hardware.controller.ButtonB.pressing();
-  input.left = hardware.controller.ButtonLeft.pressing();
-  input.right = hardware.controller.ButtonRight.pressing();
-  input.up = hardware.controller.ButtonUp.pressing();
-  input.down = hardware.controller.ButtonDown.pressing();
+  input.l1 = controller.ButtonL1.pressing();
+  input.l2 = controller.ButtonL2.pressing();
+  input.r1 = controller.ButtonR1.pressing();
+  input.r2 = controller.ButtonR2.pressing();
+  input.x = controller.ButtonX.pressing();
+  input.y = controller.ButtonY.pressing();
+  input.a = controller.ButtonA.pressing();
+  input.b = controller.ButtonB.pressing();
+  input.left = controller.ButtonLeft.pressing();
+  input.right = controller.ButtonRight.pressing();
+  input.up = controller.ButtonUp.pressing();
+  input.down = controller.ButtonDown.pressing();
 
   clear_press_events(input);
   calculate_button_rating(input);
   update_press_events(input);
 }
 
-}  // namespace basic::hardware::robots
+}  // namespace basic::input

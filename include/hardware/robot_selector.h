@@ -5,6 +5,13 @@
 
 namespace basic::hardware {
 
+enum class RobotIdentity {
+  kBasicRobot,
+  kSecondRobot,
+};
+
+inline constexpr RobotIdentity kSelectedRobot = RobotIdentity::kBasicRobot;
+
 basic::app::Robot& get_current_robot();
 
 }  // namespace basic::hardware

@@ -1,14 +1,15 @@
-#ifndef BASIC_SRC_HARDWARE_ROBOTS_ROBOT_HARDWARE_H_
-#define BASIC_SRC_HARDWARE_ROBOTS_ROBOT_HARDWARE_H_
+#ifndef BASIC_SRC_HARDWARE_BASIC_ROBOT_ROBOT_HARDWARE_H_
+#define BASIC_SRC_HARDWARE_BASIC_ROBOT_ROBOT_HARDWARE_H_
 
 #include "vex.h"
 
-namespace basic::hardware::robots {
+namespace basic::hardware::basic_robot {
 
 inline constexpr bool kIsBlue = false;
 inline constexpr int kRefreshTime = 10;
 inline constexpr int kDeadZone = 10;
 inline constexpr int kSensorLoopDelay = 50;
+
 struct RobotHardware {
   vex::motor motor_fr1{vex::PORT9, vex::ratio6_1, true};
   vex::motor motor_fr2{vex::PORT8, vex::ratio6_1, false};
@@ -29,9 +30,9 @@ struct RobotHardware {
   vex::motor trans_motor1{vex::PORT19, vex::ratio6_1, true};
   vex::motor trans_motor2{vex::PORT12, vex::ratio6_1, true};
   vex::motor trans_motor3{vex::PORT18, vex::ratio18_1, true};
-  vex::motor trans_motor4{vex::PORT14,vex::ratio6_1,true}; //changed
+  vex::motor trans_motor4{vex::PORT14, vex::ratio6_1, true};
 
-  vex::motor under_overhang_motor{vex::PORT20, vex::ratio6_1, true}; 
+  vex::motor under_overhang_motor{vex::PORT20, vex::ratio6_1, true};
   vex::motor upper_overhang_motor{vex::PORT15, vex::ratio6_1, true};
   vex::motor middle_overhang_motor{vex::PORT17, vex::ratio6_1, true};
 
@@ -57,6 +58,6 @@ struct RobotHardware {
   }
 };
 
-}  // namespace basic::hardware::robots
+}  // namespace basic::hardware::basic_robot
 
 #endif

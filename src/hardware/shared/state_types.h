@@ -1,22 +1,9 @@
-#ifndef BASIC_SRC_HARDWARE_ROBOTS_ROBOT_STATE_H_
-#define BASIC_SRC_HARDWARE_ROBOTS_ROBOT_STATE_H_
+#ifndef BASIC_SRC_HARDWARE_SHARED_STATE_TYPES_H_
+#define BASIC_SRC_HARDWARE_SHARED_STATE_TYPES_H_
 
 #include "vex.h"
 
-namespace basic::hardware::robots {
-
-enum class IndexedMechanismMode {
-  kOff,
-  kLegacyIntake,
-  kUnderTrow,
-  kMiddleThrow,
-  kUpperThrow,
-};
-
-enum class OverhangMode{
-  Collapse,
-  Expansion,
-};
+namespace basic::hardware::shared {
 
 struct ControllerInputState {
   int time_ms{0};
@@ -70,7 +57,7 @@ struct ControllerInputState {
   bool press_r1{false};
   bool press_r2{false};
 
-  double rating[4]{0, 0, 0, 0};
+  double rating[4]{0.0, 0.0, 0.0, 0.0};
 };
 
 struct SensorState {
@@ -82,24 +69,6 @@ struct SensorState {
   int hold_until_ms{0};
 };
 
-struct ChassisState {
-  double fl{0};
-  double fr{0};
-  double bl{0};
-  double br{0};
-  vex::brakeType stop_brake_type{vex::coast};
-};
-
-struct MechanismState {
-  IndexedMechanismMode indexed_mode{IndexedMechanismMode::kOff};
-};
-
-struct OverhangState {
-  OverhangMode upper_overhang_mode{OverhangMode::Collapse};
-  OverhangMode middle_overhang_mode{OverhangMode::Collapse};
-  OverhangMode under_overhang_mode{OverhangMode::Collapse};
-};
-
 struct AutonomousState {
   bool initialized{false};
   double target_heading_deg{0.0};
@@ -108,15 +77,6 @@ struct AutonomousState {
   double estimated_y_mm{0.0};
 };
 
-struct RobotState {
-  ControllerInputState controller;
-  SensorState sensors;
-  ChassisState chassis;
-  MechanismState mechanism;
-  OverhangState overhang;
-  AutonomousState autonomous;
-};
-
-}  // namespace basic::hardware::robots
+}  // namespace basic::hardware::shared
 
 #endif

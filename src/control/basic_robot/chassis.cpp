@@ -1,13 +1,18 @@
-#include "control/chassis.h"
+#include "control/basic_robot/chassis.h"
 
 #include "control/motor_control.h"
 
 #include <algorithm>
 #include <cmath>
 
-namespace basic::hardware::robots {
+namespace basic::control::basic_robot {
 
 namespace {
+
+using basic::control::stopcontrol;
+using basic::control::velocitycontrol;
+using basic::hardware::basic_robot::RobotHardware;
+using basic::hardware::basic_robot::RobotState;
 
 void apply_motor_power(vex::motor& motor, double speed, vex::brakeType type) {
   if (speed) {
@@ -25,7 +30,7 @@ double shape_input(double input) {
 }
 
 double dynamic_smooth(int now, int last, double rating) {
-  if (std::abs(now) > kDeadZone) {
+  if (std::abs(now) > basic::hardware::basic_robot::kDeadZone) {
     const double ratio = 0.4 + 0.5 * rating;
     return now * ratio + last * (1 - ratio);
   }
@@ -37,9 +42,7 @@ double dynamic_smooth(int now, int last, double rating) {
 }  // namespace
 
 void chassis_update(RobotHardware& hardware, RobotState& state) {
-  const ControllerInputState& input = state.controller;
-  const SensorState& sensors = state.sensors;
-  (void)sensors;
+  const basic::hardware::shared::ControllerInputState& input = state.controller;
 
   const double axis2 = dynamic_smooth(input.axis2, input.last_axis2, input.rating[1]);
   const double axis4 = dynamic_smooth(input.axis4, input.last_axis4, input.rating[3]);
@@ -48,8 +51,9 @@ void chassis_update(RobotHardware& hardware, RobotState& state) {
   double back_left = axis2 + axis4;
   double back_right = axis2 - axis4;
 
-  const double maxpct = std::max({std::fabs(front_left), std::fabs(front_right), std::fabs(back_left), std::fabs(back_right)});
-  if (maxpct > 100) {
+  const double maxpct = std::max(
+      {std::fabs(front_left), std::fabs(front_right), std::fabs(back_left), std::fabs(back_right)});
+  if (maxpct > 100.0) {
     const double ratio = 100.0 / maxpct;
     front_left *= ratio;
     front_right *= ratio;
@@ -57,7 +61,7 @@ void chassis_update(RobotHardware& hardware, RobotState& state) {
     back_right *= ratio;
   }
 
-  ChassisState& chassis = state.chassis;
+  basic::hardware::basic_robot::ChassisState& chassis = state.chassis;
   chassis.fl = shape_input(front_left);
   chassis.fr = shape_input(front_right);
   chassis.bl = shape_input(back_left);
@@ -71,7 +75,6 @@ void chassis_update(RobotHardware& hardware, RobotState& state) {
   apply_motor_power(hardware.motor_fl2, chassis.fl, chassis.stop_brake_type);
   apply_motor_power(hardware.motor_fr1, chassis.fr, chassis.stop_brake_type);
   apply_motor_power(hardware.motor_fr2, chassis.fr, chassis.stop_brake_type);
-
 }
 
-}  // namespace basic::hardware::robots
+}  // namespace basic::control::basic_robot

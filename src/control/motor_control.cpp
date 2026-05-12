@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace basic::hardware::robots {
+namespace basic::control {
 
 namespace {
 
@@ -121,4 +121,4 @@ bool get_installed(vex::motor& motor) {
   return motor.installed();
 }
 
-}  // namespace basic::hardware::robots
+}  // namespace basic::control
