@@ -25,7 +25,7 @@ void handle_control(){
     /*-------------Base Movement Control-------------*/
     A3 = std::abs(A3) < JOYSTICK_DEADZONE ? 0 : A3;
     A1 = std::abs(A1) < JOYSTICK_DEADZONE ? 0 : A1;
-    A1=A1*0.45;
+    A1=A1*0.4;
     if (std::abs(A3 + A1) > 0)
       moveLeftVel(A3 + A1);
     else
@@ -35,9 +35,9 @@ void handle_control(){
     else
       unlockRight();
     if(L1){
-      spinshooter_l(80);
+      spinRoller(60);
     }else if(L2){
-      spinshooter_l(-80);
+      spinRoller(-60);
     }else if(R2){
       spinshooter_m(80);
     }else if(R1){
@@ -61,7 +61,8 @@ void air_control(){
 }
 
 void autonomous(void){
-  //吐中塔
+  spinRoller(60);
+  /*//吐中塔
   drive_distance(970,50);
   wait(300,msec);
   turn_to_angle(45,12);                                                                    
@@ -125,10 +126,9 @@ void autonomous(void){
   spinshooter_l(0);
   drive_distance(50,100);
   drive_distance(-50,100);
-  */
   drive_distance(-600,40);
   turn_to_angle(105,4);
-  drive_distance(1500,70);
+  drive_distance(1500,70);*/
 }
 
 void usercontrol(void){

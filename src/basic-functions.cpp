@@ -18,9 +18,11 @@ void spinRoller(float _input){
   if (!_input) {
     Motor_Roller1.stop(coast);
     Motor_Roller2.stop(coast);
+    Motor_Roller3.stop(coast);
   }else{
     Motor_Roller1.spin(directionType::fwd, (int)127 * _input, voltageUnits::mV);
     Motor_Roller2.spin(directionType::fwd, (int)127 * _input, voltageUnits::mV);
+    Motor_Roller3.spin(directionType::fwd, (int)127 * _input*0.5, voltageUnits::mV);
   }
 }
 
