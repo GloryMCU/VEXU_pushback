@@ -20,5 +20,6 @@
 		"-mthumb",
 		"-IC:/Users/19674/Documents/vex-vscode-projects/basic/include",
 		"-IC:/Users/19674/Documents/vex-vscode-projects/basic/src"
-	]
+	],
+	"C_Cpp.errorSquiggles": "disabled"
 }
