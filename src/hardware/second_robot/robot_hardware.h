@@ -10,16 +10,16 @@ inline constexpr int kDeadZone = 10;
 inline constexpr int kSensorLoopDelay = 50;
 
 struct RobotHardware {
-  vex::motor left_front_motor{vex::PORT1, vex::ratio6_1, false};
-  vex::motor left_middle_motor{vex::PORT2, vex::ratio6_1, false};
-  vex::motor left_back_motor{vex::PORT3, vex::ratio6_1, false};
+  vex::motor left_front_motor{vex::PORT1, vex::ratio6_1, true};
+  vex::motor left_middle_motor{vex::PORT2, vex::ratio6_1, true};
+  vex::motor left_back_motor{vex::PORT3, vex::ratio6_1, true};
 
-  vex::motor right_front_motor{vex::PORT6, vex::ratio6_1, true};
-  vex::motor right_middle_motor{vex::PORT13, vex::ratio6_1, true};
-  vex::motor right_back_motor{vex::PORT17, vex::ratio6_1, true};
+  vex::motor right_front_motor{vex::PORT6, vex::ratio6_1, false};
+  vex::motor right_middle_motor{vex::PORT13, vex::ratio6_1, false};
+  vex::motor right_back_motor{vex::PORT17, vex::ratio6_1, false};
 
-  vex::motor roller_lower_motor{vex::PORT14, vex::ratio6_1, true};
-  vex::motor roller_middle_motor{vex::PORT15, vex::ratio6_1, false};
+  vex::motor roller_lower_motor{vex::PORT14, vex::ratio6_1, false};
+  vex::motor roller_middle_motor{vex::PORT15, vex::ratio6_1, true};
   vex::motor roller_upper_motor{vex::PORT19, vex::ratio6_1, true};
 
   vex::brain brain;
